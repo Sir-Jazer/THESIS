@@ -1,0 +1,3 @@
+Run XAMPP and run this on a terminal:
+cd C:\THESIS\webapp
+C:\xampp\php\php.exe .\artisan serve
