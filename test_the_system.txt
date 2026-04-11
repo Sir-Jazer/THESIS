@@ -1,3 +1,6 @@
 Run Apache and MySQL on XAMPP then run this on a terminal:
 cd C:\THESIS\webapp
 C:\xampp\php\php.exe .\artisan serve
+
+Run this in terminal if there are css assets updates:
+Push-Location c:\THESIS\webapp; & npm.cmd run build

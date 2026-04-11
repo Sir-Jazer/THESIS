@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\AcademicHead\DashboardController as AcademicHeadDashboardController;
+use App\Http\Controllers\AcademicHead\GeneralExamMatrixController as AcademicHeadGeneralExamMatrixController;
+use App\Http\Controllers\AcademicHead\ReportController as AcademicHeadReportController;
+use App\Http\Controllers\AcademicHead\ScheduleController as AcademicHeadScheduleController;
+use App\Http\Controllers\AcademicHead\SubjectExamReferenceController as AcademicHeadSubjectExamReferenceController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
 use App\Http\Controllers\Admin\SectionController as AdminSectionController;
@@ -50,6 +54,27 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:academic_head')->group(function () {
         Route::get('/academic-head/dashboard', AcademicHeadDashboardController::class)->name('academic-head.dashboard');
+        Route::get('/academic-head/schedules', [AcademicHeadScheduleController::class, 'index'])->name('academic-head.schedules.index');
+        Route::post('/academic-head/schedules/load', [AcademicHeadScheduleController::class, 'load'])->name('academic-head.schedules.load');
+        Route::post('/academic-head/schedules/{schedule}/fetch-matrix', [AcademicHeadScheduleController::class, 'fetchMatrix'])->name('academic-head.schedules.fetch-matrix');
+        Route::post('/academic-head/schedules/generate', [AcademicHeadScheduleController::class, 'generate'])->name('academic-head.schedules.generate');
+        Route::get('/academic-head/schedules/{schedule}/edit', [AcademicHeadScheduleController::class, 'edit'])->name('academic-head.schedules.edit');
+        Route::patch('/academic-head/schedules/slots/{slot}', [AcademicHeadScheduleController::class, 'updateSlot'])->name('academic-head.schedules.slots.update');
+        Route::post('/academic-head/schedules/{schedule}/save-draft', [AcademicHeadScheduleController::class, 'saveDraft'])->name('academic-head.schedules.save-draft');
+        Route::post('/academic-head/schedules/{schedule}/upload', [AcademicHeadScheduleController::class, 'upload'])->name('academic-head.schedules.upload');
+        Route::post('/academic-head/schedules/{schedule}/reset', [AcademicHeadScheduleController::class, 'reset'])->name('academic-head.schedules.reset');
+        Route::delete('/academic-head/schedules/{schedule}', [AcademicHeadScheduleController::class, 'destroy'])->name('academic-head.schedules.destroy');
+
+        Route::get('/academic-head/general-exam-matrix', [AcademicHeadGeneralExamMatrixController::class, 'index'])->name('academic-head.general-exam-matrix.index');
+        Route::get('/academic-head/general-exam-matrix/create', [AcademicHeadGeneralExamMatrixController::class, 'create'])->name('academic-head.general-exam-matrix.create');
+        Route::post('/academic-head/general-exam-matrix', [AcademicHeadGeneralExamMatrixController::class, 'store'])->name('academic-head.general-exam-matrix.store');
+        Route::post('/academic-head/general-exam-matrix/{matrix}/upload', [AcademicHeadGeneralExamMatrixController::class, 'upload'])->name('academic-head.general-exam-matrix.upload');
+        Route::get('/academic-head/general-exam-matrix/{matrix}/edit', [AcademicHeadGeneralExamMatrixController::class, 'edit'])->name('academic-head.general-exam-matrix.edit');
+        Route::put('/academic-head/general-exam-matrix/{matrix}', [AcademicHeadGeneralExamMatrixController::class, 'update'])->name('academic-head.general-exam-matrix.update');
+        Route::delete('/academic-head/general-exam-matrix/{matrix}', [AcademicHeadGeneralExamMatrixController::class, 'destroy'])->name('academic-head.general-exam-matrix.destroy');
+        Route::get('/academic-head/subject-exam-references', [AcademicHeadSubjectExamReferenceController::class, 'index'])->name('academic-head.subject-exam-references.index');
+        Route::put('/academic-head/subject-exam-references', [AcademicHeadSubjectExamReferenceController::class, 'update'])->name('academic-head.subject-exam-references.update');
+        Route::get('/academic-head/reports', AcademicHeadReportController::class)->name('academic-head.reports');
     });
 
     Route::middleware('role:admin')->group(function () {
@@ -63,6 +88,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/users/academic-head/create', [AdminUserController::class, 'createAcademicHead'])->name('admin.users.academic-head.create');
         Route::post('/admin/users/academic-head', [AdminUserController::class, 'storeAcademicHead'])->name('admin.users.academic-head.store');
         Route::patch('/admin/users/{user}/status', [AdminUserController::class, 'updateStatus'])->name('admin.users.status.update');
+        Route::patch('/admin/users/{user}/advisory-section', [AdminUserController::class, 'updateAdvisorySection'])->name('admin.users.advisory-section.update');
         Route::post('/admin/users/{user}/send-reset', [AdminUserController::class, 'sendReset'])->name('admin.users.send-reset');
 
         Route::resource('admin/rooms', AdminRoomController::class)->except(['show'])->names('admin.rooms');

@@ -24,9 +24,9 @@
                 <div>
                     <x-input-label for="year_level" value="Year Level" />
                     <select id="year_level" name="year_level" class="mt-1 block w-full text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600" required>
-                        @for ($year = 1; $year <= 6; $year++)
-                            <option value="{{ $year }}" @selected((int) old('year_level', $section->year_level) === $year)>Year {{ $year }}</option>
-                        @endfor
+                        @foreach ([1 => '1st year', 2 => '2nd year', 3 => '3rd year', 4 => '4th year'] as $year => $label)
+                            <option value="{{ $year }}" @selected((int) old('year_level', $section->year_level) === $year)>{{ $label }}</option>
+                        @endforeach
                     </select>
                 </div>
 

@@ -21,7 +21,7 @@
                 <select id="advisory_section_id" name="advisory_section_id" class="mt-1 block w-full text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600">
                     <option value="">No advisory section</option>
                     @foreach ($sections as $section)
-                        <option value="{{ $section->id }}">{{ $section->program?->code }} {{ $section->year_level }}{{ $section->section_code }}</option>
+                        <option value="{{ $section->id }}">{{ $section->display_name }}</option>
                     @endforeach
                 </select>
             </div>

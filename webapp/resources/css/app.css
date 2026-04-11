@@ -2,8 +2,107 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    :root {
+        --portal-bg: #f3f6fb;
+        --portal-header-bg: #0a5e9d;
+        --portal-header-border: #084b7d;
+        --portal-sidebar-bg: #ffffff;
+        --portal-surface: #ffffff;
+        --portal-surface-muted: #f8fafc;
+        --portal-surface-accent: #eef4fb;
+        --portal-text: #1e293b;
+        --portal-muted: #64748b;
+        --portal-border: #e2e8f0;
+        --portal-primary: #0b63a8;
+        --portal-primary-soft: #e6f2fb;
+        --portal-success-soft: #ecfdf3;
+        --portal-success-border: #86efac;
+        --portal-success-text: #166534;
+        --portal-error-soft: #fef2f2;
+        --portal-error-border: #fca5a5;
+        --portal-error-text: #b91c1c;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    body.portal-body {
+        margin: 0;
+        background: radial-gradient(circle at top right, #dbeafe 0%, #f3f6fb 40%, #eef2f8 100%);
+        color: var(--portal-text);
+        font-family: "Segoe UI", "Trebuchet MS", "Tahoma", sans-serif;
+        overflow-x: hidden;
+    }
+}
+
 /* Button Base Styles */
 @layer components {
+    .portal-shell {
+        @apply relative;
+    }
+
+    .portal-header {
+        background: var(--portal-header-bg);
+        box-shadow: 0 1px 0 rgba(8, 45, 74, 0.35);
+        width: 100%;
+        left: 0;
+    }
+
+    .portal-sidebar {
+        background: var(--portal-sidebar-bg);
+    }
+
+    .portal-content {
+        @apply min-h-[calc(100vh-4rem)];
+    }
+
+    .portal-page-header {
+        border-bottom: 1px solid var(--portal-border);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.74));
+        backdrop-filter: blur(6px);
+    }
+
+    .portal-sidebar-heading {
+        @apply text-xs font-bold uppercase tracking-[0.14em] text-slate-400;
+    }
+
+    .portal-sidebar-role {
+        @apply mt-1 text-[22px] font-semibold text-slate-600;
+
+    }
+
+    .portal-nav-item {
+        @apply flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition;
+    }
+
+    .portal-nav-item-idle {
+        @apply text-slate-600 hover:bg-blue-50 hover:text-blue-700;
+    }
+
+    .portal-nav-item-active {
+        background: var(--portal-primary-soft);
+        color: var(--portal-primary);
+        box-shadow: inset 3px 0 0 var(--portal-primary);
+    }
+
+    .portal-nav-icon {
+        @apply inline-flex h-8 w-8 items-center justify-center rounded-lg;
+    }
+
+    .portal-nav-item-idle .portal-nav-icon {
+        @apply bg-slate-100 text-slate-500;
+    }
+
+    .portal-nav-item-active .portal-nav-icon {
+        @apply bg-blue-100 text-blue-700;
+    }
+
+    .portal-nav-label {
+        @apply whitespace-nowrap;
+    }
+
     .btn-primary {
         @apply px-4 py-2.5 text-base font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-800 transition-colors duration-150 ease-in-out;
     }
@@ -24,7 +123,7 @@
         @apply px-3 py-1.5 text-sm font-semibold rounded-md;
     }
 
-    /* Form Inputs Dark Mode */
+    /* Shared Form Inputs */
     input[type="text"],
     input[type="email"],
     input[type="password"],
@@ -37,7 +136,7 @@
     input[type="tel"],
     select,
     textarea {
-        @apply dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600 dark:placeholder-gray-400;
+        @apply border-slate-300 bg-white text-slate-800 placeholder:text-slate-400;
     }
 
     input[type="text"]:focus,
@@ -52,12 +151,12 @@
     input[type="tel"]:focus,
     select:focus,
     textarea:focus {
-        @apply dark:border-blue-500 dark:ring-blue-500;
+        @apply border-blue-500 ring-blue-500;
     }
 
     /* Form Labels */
     label {
-        @apply text-base font-semibold text-gray-700 dark:text-gray-100;
+        @apply text-base font-semibold text-gray-700;
     }
 
     /* Table Styles */
@@ -66,19 +165,145 @@
     }
 
     thead {
-        @apply bg-slate-700 dark:bg-slate-700 text-gray-100 dark:text-gray-100;
+        @apply bg-slate-100 text-slate-700;
     }
 
     tbody tr {
-        @apply border-b border-slate-600 dark:border-slate-600 hover:bg-slate-700 dark:hover:bg-slate-700;
+        @apply border-b border-slate-200 hover:bg-slate-50;
     }
 
     tbody td {
-        @apply text-gray-100 dark:text-gray-100 py-3 px-4;
+        @apply py-3 px-4 text-slate-700;
     }
 
     /* Card Styles */
     .card {
-        @apply bg-slate-800 dark:bg-slate-800 text-gray-100 dark:text-gray-100 rounded-lg shadow-lg p-6;
+        @apply rounded-lg border border-slate-200 bg-white p-6 text-slate-800 shadow-lg;
+    }
+
+    /* Portal Content Light Theme Overrides */
+    .portal-content {
+        @apply text-slate-800;
+    }
+
+    .portal-content .bg-slate-800 {
+        background-color: var(--portal-surface);
+        border: 1px solid var(--portal-border);
+        box-shadow: 0 16px 40px -28px rgba(15, 23, 42, 0.35);
+    }
+
+    .portal-content .bg-slate-700 {
+        background-color: var(--portal-surface-accent);
+    }
+
+    .portal-content .text-gray-100,
+    .portal-content .text-gray-200,
+    .portal-content .text-gray-300 {
+        color: var(--portal-text);
+    }
+
+    .portal-content .text-gray-400 {
+        color: var(--portal-muted);
+    }
+
+    .portal-content .border-slate-600,
+    .portal-content .border-slate-700 {
+        border-color: var(--portal-border);
+    }
+
+    .portal-content .hover\:bg-slate-700:hover,
+    .portal-content .hover\:bg-slate-750:hover {
+        background-color: var(--portal-surface-muted);
+    }
+
+    .portal-content table {
+        width: 100%;
+        font-size: 1rem;
+    }
+
+    .portal-content table thead {
+        color: #334155;
+        background-color: var(--portal-surface-accent);
+    }
+
+    .portal-content table thead th {
+        border-bottom: 1px solid var(--portal-border);
+    }
+
+    .portal-content table tbody tr {
+        border-bottom: 1px solid var(--portal-border);
+        transition: background-color 150ms ease-in-out;
+    }
+
+    .portal-content table tbody tr:hover {
+        background-color: var(--portal-surface-muted);
+    }
+
+    .portal-content table tbody td {
+        color: #334155;
+        padding: 0.75rem 1rem;
+        vertical-align: top;
+    }
+
+    .portal-content label {
+        color: #334155;
+    }
+
+    .portal-content input[type="text"],
+    .portal-content input[type="email"],
+    .portal-content input[type="password"],
+    .portal-content input[type="number"],
+    .portal-content input[type="date"],
+    .portal-content input[type="time"],
+    .portal-content input[type="datetime-local"],
+    .portal-content input[type="search"],
+    .portal-content input[type="url"],
+    .portal-content input[type="tel"],
+    .portal-content select,
+    .portal-content textarea {
+        border-color: #cbd5e1;
+        background-color: #ffffff;
+        color: #1e293b;
+    }
+
+    .portal-content input[type="text"]:focus,
+    .portal-content input[type="email"]:focus,
+    .portal-content input[type="password"]:focus,
+    .portal-content input[type="number"]:focus,
+    .portal-content input[type="date"]:focus,
+    .portal-content input[type="time"]:focus,
+    .portal-content input[type="datetime-local"]:focus,
+    .portal-content input[type="search"]:focus,
+    .portal-content input[type="url"]:focus,
+    .portal-content input[type="tel"]:focus,
+    .portal-content select:focus,
+    .portal-content textarea:focus {
+        border-color: #3b82f6;
+        outline: none;
+        box-shadow: 0 0 0 1px #3b82f6;
+    }
+
+    .portal-content .bg-green-900 {
+        background-color: var(--portal-success-soft);
+    }
+
+    .portal-content .border-green-700 {
+        border-color: var(--portal-success-border);
+    }
+
+    .portal-content .text-green-100 {
+        color: var(--portal-success-text);
+    }
+
+    .portal-content .bg-red-900 {
+        background-color: var(--portal-error-soft);
+    }
+
+    .portal-content .border-red-700 {
+        border-color: var(--portal-error-border);
+    }
+
+    .portal-content .text-red-100 {
+        color: var(--portal-error-text);
     }
 }

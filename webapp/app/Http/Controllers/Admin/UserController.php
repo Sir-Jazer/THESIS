@@ -19,7 +19,15 @@ class UserController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = User::query()->orderByDesc('created_at');
+        $query = User::query()
+            ->with([
+                'studentProfile.section.proctor',
+                'proctorProfile',
+                'cashierProfile',
+                'academicHeadProfile',
+                'advisorySections.program',
+            ])
+            ->orderByDesc('created_at');
 
         if ($request->filled('role')) {
             $query->where('role', $request->string('role')->toString());
@@ -34,12 +42,26 @@ class UserController extends Controller
             $query->where(function ($q) use ($search): void {
                 $q->where('first_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('studentProfile', function ($sq) use ($search): void {
+                        $sq->where('student_id', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('proctorProfile', function ($sq) use ($search): void {
+                        $sq->where('employee_id', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('cashierProfile', function ($sq) use ($search): void {
+                        $sq->where('employee_id', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('academicHeadProfile', function ($sq) use ($search): void {
+                        $sq->where('employee_id', 'like', "%{$search}%");
+                    })
+                    ->orWhere('employee_id', 'like', "%{$search}%");
             });
         }
 
         return view('admin.users.index', [
             'users' => $query->paginate(15)->withQueryString(),
+            'sections' => Section::with('program')->orderBy('year_level')->orderBy('section_code')->get(),
         ]);
     }
 
@@ -178,5 +200,26 @@ class UserController extends Controller
         }
 
         return back()->with('status', 'Password reset link sent to user email.');
+    }
+
+    public function updateAdvisorySection(Request $request, User $user): RedirectResponse
+    {
+        if (! $user->isProctor()) {
+            return back()->withErrors(['advisory_section_id' => 'Only proctor accounts can be assigned advisory sections.']);
+        }
+
+        $validated = $request->validate([
+            'advisory_section_id' => ['nullable', 'exists:sections,id'],
+        ]);
+
+        DB::transaction(function () use ($user, $validated): void {
+            Section::where('proctor_id', $user->id)->update(['proctor_id' => null]);
+
+            if (! empty($validated['advisory_section_id'])) {
+                Section::whereKey($validated['advisory_section_id'])->update(['proctor_id' => $user->id]);
+            }
+        });
+
+        return back()->with('status', 'Proctor advisory class updated.');
     }
 }

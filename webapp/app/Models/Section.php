@@ -11,9 +11,10 @@ class Section extends Model
     public function program() { return $this->belongsTo(Program::class); }
     public function proctor() { return $this->belongsTo(User::class, 'proctor_id'); }
     public function students() { return $this->hasMany(StudentProfile::class); }
+    public function examSchedules() { return $this->hasMany(SectionExamSchedule::class); }
 
     public function getDisplayNameAttribute(): string
     {
-        return $this->program->code . ' ' . $this->year_level . $this->section_code;
+        return $this->section_code;
     }
 }

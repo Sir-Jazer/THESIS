@@ -3,8 +3,8 @@
         <h2 class="font-bold text-3xl text-gray-100 dark:text-gray-100 leading-tight">System Administrator Dashboard</h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+    <div class="py-8">
+        <div class="w-full space-y-4">
             <div class="bg-slate-800 dark:bg-slate-800 overflow-hidden shadow-lg sm:rounded-lg">
                 <div class="p-6 text-gray-100 dark:text-gray-100 text-lg">Welcome, {{ auth()->user()->full_name }}.</div>
             </div>

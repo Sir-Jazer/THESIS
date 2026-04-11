@@ -14,4 +14,9 @@ class Room extends Model
             'is_available' => 'boolean',
         ];
     }
+
+    public function scheduleSlots()
+    {
+        return $this->hasMany(SectionExamScheduleSlot::class);
+    }
 }

@@ -57,7 +57,7 @@
                     <option value="">No section selected</option>
                     @foreach ($sections as $section)
                         <option value="{{ $section->id }}" @selected(old('section_id') == $section->id)>
-                            {{ $section->program?->code }} {{ $section->year_level }}{{ $section->section_code }}
+                            {{ $section->display_name }}
                         </option>
                     @endforeach
                 </select>

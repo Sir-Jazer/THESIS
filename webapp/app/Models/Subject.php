@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Subject extends Model
 {
-    protected $fillable = ['code', 'name', 'units'];
+    protected $fillable = ['code', 'course_serial_number', 'name', 'units'];
 
     public function programs()
     {
@@ -27,5 +27,20 @@ class Subject extends Model
     public function students()
     {
         return $this->belongsToMany(User::class, 'student_subjects')->withTimestamps();
+    }
+
+    public function matrixSlots()
+    {
+        return $this->hasMany(ExamMatrixSlot::class);
+    }
+
+    public function examReferences()
+    {
+        return $this->hasMany(SubjectExamReference::class);
+    }
+
+    public function scheduleSlots()
+    {
+        return $this->hasMany(SectionExamScheduleSlot::class);
     }
 }

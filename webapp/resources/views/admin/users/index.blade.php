@@ -1,13 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-bold text-3xl text-gray-100 dark:text-gray-100 leading-tight">User Management</h2>
-            <div class="flex gap-2">
-                <a href="{{ route('admin.users.proctor.create') }}" class="text-base px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition duration-150 ease-in-out">New Proctor</a>
-                <a href="{{ route('admin.users.cashier.create') }}" class="text-base px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition duration-150 ease-in-out">New Cashier</a>
-                <a href="{{ route('admin.users.academic-head.create') }}" class="text-base px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition duration-150 ease-in-out">New Academic Head</a>
-            </div>
-        </div>
+        <h2 class="font-bold text-3xl text-gray-100 dark:text-gray-100 leading-tight">User Management</h2>
     </x-slot>
 
     <div class="py-8">
@@ -16,9 +9,18 @@
                 <div class="bg-green-900 dark:bg-green-900 border border-green-700 dark:border-green-700 text-green-100 dark:text-green-100 px-4 py-3 rounded-lg text-base font-semibold">{{ session('status') }}</div>
             @endif
 
+            <div class="relative inline-block" x-data="{ open: false }">
+                <button @click="open = !open" class="text-base px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition duration-150 ease-in-out">+ Add New User</button>
+                <div x-show="open" @click.away="open = false" class="absolute left-0 mt-2 w-48 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg z-50">
+                    <a href="{{ route('admin.users.proctor.create') }}" class="block px-4 py-3 text-slate-700 dark:text-gray-100 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm first:rounded-t-lg">New Proctor</a>
+                    <a href="{{ route('admin.users.cashier.create') }}" class="block px-4 py-3 text-slate-700 dark:text-gray-100 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm">New Cashier</a>
+                    <a href="{{ route('admin.users.academic-head.create') }}" class="block px-4 py-3 text-slate-700 dark:text-gray-100 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm last:rounded-b-lg">New Academic Head</a>
+                </div>
+            </div>
+
             <div class="bg-slate-800 dark:bg-slate-800 p-4 shadow-lg sm:rounded-lg">
                 <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name/email" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600">
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name/email/ID" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600">
                     <select name="role" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600">
                         <option value="">All roles</option>
                         @foreach (['student','proctor','cashier','academic_head','admin'] as $role)
@@ -35,6 +37,28 @@
                 </form>
             </div>
 
+            @php
+                $selectedRole = request('role');
+                $isAllRoles = blank($selectedRole);
+                $isStudentFilter = $selectedRole === 'student';
+                $isProctorFilter = $selectedRole === 'proctor';
+
+                $idHeader = 'ID Number';
+                if ($isStudentFilter) {
+                    $idHeader = 'Student ID';
+                } elseif (in_array($selectedRole, ['proctor', 'cashier', 'academic_head', 'admin'], true)) {
+                    $idHeader = 'Employee ID';
+                }
+
+                $colspan = 6;
+                if ($isStudentFilter) {
+                    $colspan++;
+                }
+                if ($isProctorFilter) {
+                    $colspan += 2;
+                }
+            @endphp
+
             <div class="bg-slate-800 dark:bg-slate-800 shadow-lg sm:rounded-lg overflow-hidden">
                 <table class="min-w-full text-base">
                     <thead class="bg-slate-700 dark:bg-slate-700 text-gray-100 dark:text-gray-100">
@@ -42,16 +66,66 @@
                             <th class="text-left p-4 font-semibold">Name</th>
                             <th class="text-left p-4 font-semibold">Email</th>
                             <th class="text-left p-4 font-semibold">Role</th>
+                            <th class="text-left p-4 font-semibold">{{ $idHeader }}</th>
+                            @if ($isStudentFilter)
+                                <th class="text-left p-4 font-semibold">Adviser</th>
+                            @endif
+                            @if ($isProctorFilter)
+                                <th class="text-left p-4 font-semibold">Department</th>
+                                <th class="text-left p-4 font-semibold">Advisory Class</th>
+                            @endif
                             <th class="text-left p-4 font-semibold">Status</th>
                             <th class="text-left p-4 font-semibold">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($users as $user)
+                            @php
+                                $idNumber = '—';
+
+                                if ($user->role === 'student') {
+                                    $idNumber = $user->studentProfile?->student_id ?? '—';
+                                } elseif ($user->role === 'proctor') {
+                                    $idNumber = $user->proctorProfile?->employee_id ?? '—';
+                                } elseif ($user->role === 'cashier') {
+                                    $idNumber = $user->cashierProfile?->employee_id ?? '—';
+                                } elseif ($user->role === 'academic_head') {
+                                    $idNumber = $user->academicHeadProfile?->employee_id ?? '—';
+                                } elseif ($user->role === 'admin') {
+                                    $idNumber = $user->employee_id ?? '—';
+                                }
+
+                                $adviserName = $user->studentProfile?->section?->proctor?->full_name ?? '—';
+                                $currentAdvisorySectionId = $user->advisorySections->first()?->id;
+                                $currentAdvisorySectionName = $user->advisorySections->first()?->display_name ?? 'Unassigned';
+                            @endphp
                             <tr class="border-t border-slate-700 dark:border-slate-700 hover:bg-slate-750 dark:hover:bg-slate-750">
                                 <td class="p-4 text-gray-100 dark:text-gray-100">{{ $user->full_name }}</td>
                                 <td class="p-4 text-gray-100 dark:text-gray-100">{{ $user->email }}</td>
                                 <td class="p-4 text-gray-100 dark:text-gray-100">{{ $user->role }}</td>
+                                <td class="p-4 text-gray-100 dark:text-gray-100">{{ $idNumber }}</td>
+                                @if ($isStudentFilter)
+                                    <td class="p-4 text-gray-100 dark:text-gray-100">{{ $adviserName }}</td>
+                                @endif
+                                @if ($isProctorFilter)
+                                    <td class="p-4 text-gray-100 dark:text-gray-100">{{ $user->proctorProfile?->department ?? '—' }}</td>
+                                    <td class="p-4">
+                                        <form method="POST" action="{{ route('admin.users.advisory-section.update', $user) }}" class="flex flex-wrap items-center gap-2">
+                                            @csrf
+                                            @method('PATCH')
+                                            <select name="advisory_section_id" class="text-sm border-slate-600 rounded dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600 min-w-44">
+                                                <option value="">Unassigned</option>
+                                                @foreach ($sections as $section)
+                                                    <option value="{{ $section->id }}" @selected((int) $currentAdvisorySectionId === (int) $section->id)>
+                                                        {{ $section->display_name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <button class="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded transition duration-150 ease-in-out">Save</button>
+                                            <span class="text-xs text-gray-300">Current: {{ $currentAdvisorySectionName }}</span>
+                                        </form>
+                                    </td>
+                                @endif
                                 <td class="p-4 text-gray-100 dark:text-gray-100">{{ $user->status }}</td>
                                 <td class="p-4">
                                     <div class="flex flex-wrap gap-2">
@@ -73,7 +147,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="p-4 text-center text-gray-400 dark:text-gray-400 text-base">No users found.</td></tr>
+                            <tr><td colspan="{{ $colspan }}" class="p-4 text-center text-gray-400 dark:text-gray-400 text-base">No users found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

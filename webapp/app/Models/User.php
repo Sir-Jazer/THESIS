@@ -52,4 +52,7 @@ class User extends Authenticatable
     public function academicHeadProfile() { return $this->hasOne(AcademicHeadProfile::class); }
     public function subjects() { return $this->belongsToMany(Subject::class, 'student_subjects')->withTimestamps(); }
     public function advisorySections() { return $this->hasMany(Section::class, 'proctor_id'); }
+    public function assignedExamSlots() { return $this->belongsToMany(SectionExamScheduleSlot::class, 'section_exam_schedule_slot_proctors', 'proctor_id', 'section_exam_schedule_slot_id')->withTimestamps(); }
+    public function createdExamMatrices() { return $this->hasMany(ExamMatrix::class, 'created_by'); }
+    public function publishedExamSchedules() { return $this->hasMany(SectionExamSchedule::class, 'published_by'); }
 }

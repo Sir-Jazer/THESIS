@@ -34,7 +34,7 @@ class SectionController extends Controller
     public function store(Request $request, Program $program): RedirectResponse
     {
         $validated = $request->validate([
-            'year_level' => ['required', 'integer', 'min:1', 'max:6'],
+            'year_level' => ['required', 'integer', 'min:1', 'max:4'],
             'section_code' => [
                 'required',
                 'string',
@@ -71,7 +71,7 @@ class SectionController extends Controller
         $this->ensureSectionBelongsToProgram($program, $section);
 
         $validated = $request->validate([
-            'year_level' => ['required', 'integer', 'min:1', 'max:6'],
+            'year_level' => ['required', 'integer', 'min:1', 'max:4'],
             'section_code' => [
                 'required',
                 'string',

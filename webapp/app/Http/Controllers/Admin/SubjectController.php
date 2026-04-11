@@ -12,10 +12,44 @@ use Illuminate\View\View;
 
 class SubjectController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $filters = [
+            'program_id' => $request->integer('program_id') ?: null,
+            'year_level' => in_array($request->integer('year_level'), [1, 2, 3, 4], true)
+                ? $request->integer('year_level')
+                : null,
+            'semester' => in_array($request->integer('semester'), [1, 2], true)
+                ? $request->integer('semester')
+                : null,
+        ];
+
+        $subjects = Subject::query()
+            ->with(['programs:id,code'])
+            ->withCount('programs')
+            ->when($filters['program_id'] || $filters['year_level'] || $filters['semester'], function ($query) use ($filters): void {
+                $query->whereHas('programs', function ($programQuery) use ($filters): void {
+                    if ($filters['program_id']) {
+                        $programQuery->where('programs.id', $filters['program_id']);
+                    }
+
+                    if ($filters['year_level']) {
+                        $programQuery->where('program_subjects.year_level', '=', $filters['year_level']);
+                    }
+
+                    if ($filters['semester']) {
+                        $programQuery->where('program_subjects.semester', '=', $filters['semester']);
+                    }
+                });
+            })
+            ->orderBy('code')
+            ->paginate(15)
+            ->withQueryString();
+
         return view('admin.subjects.index', [
-            'subjects' => Subject::withCount('programs')->orderBy('code')->paginate(15),
+            'subjects' => $subjects,
+            'programs' => Program::orderBy('code')->get(['id', 'code', 'name']),
+            'filters' => $filters,
         ]);
     }
 
@@ -34,6 +68,7 @@ class SubjectController extends Controller
         DB::transaction(function () use ($validated): void {
             $subject = Subject::create([
                 'code' => $validated['code'],
+                'course_serial_number' => $validated['course_serial_number'],
                 'name' => $validated['name'],
                 'units' => $validated['units'],
             ]);
@@ -64,6 +99,7 @@ class SubjectController extends Controller
         DB::transaction(function () use ($subject, $validated): void {
             $subject->update([
                 'code' => $validated['code'],
+                'course_serial_number' => $validated['course_serial_number'],
                 'name' => $validated['name'],
                 'units' => $validated['units'],
             ]);
@@ -86,22 +122,32 @@ class SubjectController extends Controller
     private function validateSubjectRequest(Request $request, ?int $ignoreId = null): array
     {
         $codeRule = 'unique:subjects,code';
+        $serialRule = 'unique:subjects,course_serial_number';
         if ($ignoreId) {
             $codeRule .= ',' . $ignoreId;
+            $serialRule .= ',' . $ignoreId;
         }
 
         return $request->validate([
             'code' => ['required', 'string', 'max:50', $codeRule],
+            'course_serial_number' => ['required', 'string', 'max:50', $serialRule],
             'name' => ['required', 'string', 'max:255'],
             'units' => ['required', 'integer', 'min:1', 'max:10'],
             'program_links' => ['nullable', 'array'],
-            'program_links.*.program_id' => ['required', 'exists:programs,id'],
-            'program_links.*.year_level' => ['required', 'integer', 'between:1,6'],
+            'program_links.*.program_id' => ['required', 'distinct', 'exists:programs,id'],
+            'program_links.*.year_level' => ['required', 'integer', 'between:1,4'],
             'program_links.*.semester' => ['required', 'integer', 'between:1,2'],
             'prerequisite_ids' => ['nullable', 'array'],
             'prerequisite_ids.*' => ['integer', 'exists:subjects,id'],
             'corequisite_ids' => ['nullable', 'array'],
             'corequisite_ids.*' => ['integer', 'exists:subjects,id'],
+        ], [
+            'code.unique' => 'This subject code already exists. Use a different code for another program-specific offering.',
+            'course_serial_number.unique' => 'This course serial number already exists. Enter a unique fixed serial number for this subject.',
+            'program_links.*.program_id.distinct' => 'Each program may only appear once in Program Associations for this subject record.',
+            'program_links.*.program_id.required' => 'Select a program for each association row.',
+            'program_links.*.year_level.required' => 'Select a year level for each program association.',
+            'program_links.*.semester.required' => 'Select a semester for each program association.',
         ]);
     }
 
@@ -110,6 +156,10 @@ class SubjectController extends Controller
         $payload = [];
 
         foreach ($programLinks as $row) {
+            if (empty($row['program_id'])) {
+                continue;
+            }
+
             $payload[(int) $row['program_id']] = [
                 'year_level' => (int) $row['year_level'],
                 'semester' => (int) $row['semester'],

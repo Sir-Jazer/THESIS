@@ -16,4 +16,6 @@ class Program extends Model
 
     public function sections() { return $this->hasMany(Section::class); }
     public function studentProfiles() { return $this->hasMany(StudentProfile::class); }
+    public function examMatrices() { return $this->hasMany(ExamMatrix::class); }
+    public function examSchedules() { return $this->hasMany(SectionExamSchedule::class); }
 }
