@@ -11,4 +11,6 @@ class StudentProfile extends Model
     public function user() { return $this->belongsTo(User::class); }
     public function program() { return $this->belongsTo(Program::class); }
     public function section() { return $this->belongsTo(Section::class); }
+    public function examPermits() { return $this->hasMany(ExamPermit::class); }
+    public function examAttendances() { return $this->hasMany(ExamAttendance::class); }
 }

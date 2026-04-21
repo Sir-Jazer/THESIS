@@ -14,6 +14,32 @@ use Illuminate\Validation\ValidationException;
 
 class ScheduleService
 {
+    /**
+     * @return array{
+     *     has_blockers: bool,
+     *     total_blockers: int,
+     *     missing_fixed_subjects: array<int, string>,
+     *     assigned_without_room: array<int, string>,
+     *     assigned_without_proctor: array<int, string>
+     * }
+     */
+    public function getPublishReadiness(SectionExamSchedule $schedule): array
+    {
+        $blockers = $this->collectPublishBlockers($schedule);
+
+        $totalBlockers = count($blockers['missing_fixed_subjects'])
+            + count($blockers['assigned_without_room'])
+            + count($blockers['assigned_without_proctor']);
+
+        return [
+            'has_blockers' => $totalBlockers > 0,
+            'total_blockers' => $totalBlockers,
+            'missing_fixed_subjects' => $blockers['missing_fixed_subjects'],
+            'assigned_without_room' => $blockers['assigned_without_room'],
+            'assigned_without_proctor' => $blockers['assigned_without_proctor'],
+        ];
+    }
+
     public function generateForSection(ExamMatrix $matrix, Section $section, int $actorId): SectionExamSchedule
     {
         $matrix->loadMissing(['slots.slotSubjects']);
@@ -297,6 +323,8 @@ class ScheduleService
                 'subject_id' => $subjectId,
                 'room_id' => $roomId,
                 'proctor_ids' => $proctorIds,
+                'has_room' => array_key_exists('room_id', $slotPayload),
+                'has_proctors' => array_key_exists('proctor_ids', $slotPayload),
             ];
         }
 
@@ -305,13 +333,18 @@ class ScheduleService
                 /** @var SectionExamScheduleSlot $slot */
                 $slot = $update['slot'];
 
-                $slot->update([
+                $updateData = [
                     'subject_id' => $update['subject_id'],
-                    'room_id' => $update['room_id'],
                     'is_manual_assignment' => true,
-                ]);
+                ];
+                if ($update['has_room']) {
+                    $updateData['room_id'] = $update['room_id'];
+                }
+                $slot->update($updateData);
 
-                $slot->proctors()->sync($update['proctor_ids']->all());
+                if ($update['has_proctors']) {
+                    $slot->proctors()->sync($update['proctor_ids']->all());
+                }
             }
         });
 
@@ -512,27 +545,61 @@ class ScheduleService
 
     private function assertSchedulePublishable(SectionExamSchedule $schedule): void
     {
+        $blockers = $this->collectPublishBlockers($schedule);
+
+        if (! empty($blockers['missing_fixed_subjects'])) {
+            throw ValidationException::withMessages([
+                'publish' => 'Cannot publish while fixed slots are missing subjects. First unresolved slot: '.$blockers['missing_fixed_subjects'][0].'.',
+            ]);
+        }
+
+        if (! empty($blockers['assigned_without_room'])) {
+            throw ValidationException::withMessages([
+                'publish' => 'Cannot publish while assigned subjects have no room. First unresolved slot: '.$blockers['assigned_without_room'][0].'.',
+            ]);
+        }
+
+        if (! empty($blockers['assigned_without_proctor'])) {
+            throw ValidationException::withMessages([
+                'publish' => 'Cannot publish while assigned subjects have no proctor. First unresolved slot: '.$blockers['assigned_without_proctor'][0].'.',
+            ]);
+        }
+    }
+
+    /**
+     * @return array{
+     *     missing_fixed_subjects: array<int, string>,
+     *     assigned_without_room: array<int, string>,
+     *     assigned_without_proctor: array<int, string>
+     * }
+     */
+    private function collectPublishBlockers(SectionExamSchedule $schedule): array
+    {
         $schedule->loadMissing(['slots.proctors']);
 
+        $blockers = [
+            'missing_fixed_subjects' => [],
+            'assigned_without_room' => [],
+            'assigned_without_proctor' => [],
+        ];
+
         foreach ($schedule->slots as $slot) {
+            $slotLabel = $this->slotContextLabel($slot);
+
             if ($slot->is_fixed && ! $slot->subject_id) {
-                throw ValidationException::withMessages([
-                    'publish' => 'Cannot publish while fixed slots are missing subjects.',
-                ]);
+                $blockers['missing_fixed_subjects'][] = $slotLabel;
             }
 
             if ($slot->subject_id && ! $slot->room_id) {
-                throw ValidationException::withMessages([
-                    'publish' => 'Cannot publish while assigned subjects have no room.',
-                ]);
+                $blockers['assigned_without_room'][] = $slotLabel;
             }
 
             if ($slot->subject_id && $slot->proctors->isEmpty()) {
-                throw ValidationException::withMessages([
-                    'publish' => 'Cannot publish while assigned subjects have no proctor.',
-                ]);
+                $blockers['assigned_without_proctor'][] = $slotLabel;
             }
         }
+
+        return $blockers;
     }
 
     private function resolveFixedSubjectId($matrixSlot, ?Collection $eligibleSubjectIds = null): ?int
@@ -571,5 +638,26 @@ class ScheduleService
             : (string) $slotDate;
 
         return $dateValue.'|'.$startTime.'|'.$endTime;
+    }
+
+    private function slotContextLabel(SectionExamScheduleSlot $slot): string
+    {
+        $dateValue = $slot->slot_date instanceof \DateTimeInterface
+            ? $slot->slot_date->format('Y-m-d')
+            : (string) $slot->slot_date;
+
+        $startTime = $this->formatTimeLabel((string) $slot->start_time);
+        $endTime = $this->formatTimeLabel((string) $slot->end_time);
+
+        return $dateValue.' '.$startTime.'-'.$endTime;
+    }
+
+    private function formatTimeLabel(string $time): string
+    {
+        if (preg_match('/^\d{2}:\d{2}/', $time) === 1) {
+            return substr($time, 0, 5);
+        }
+
+        return $time;
     }
 }

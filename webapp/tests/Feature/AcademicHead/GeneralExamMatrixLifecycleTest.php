@@ -5,6 +5,7 @@ namespace Tests\Feature\AcademicHead;
 use App\Models\ExamMatrix;
 use App\Models\ExamMatrixSlot;
 use App\Models\ExamMatrixSlotSubject;
+use App\Models\AcademicSetting;
 use App\Models\Program;
 use App\Models\Room;
 use App\Models\Section;
@@ -349,11 +350,264 @@ class GeneralExamMatrixLifecycleTest extends TestCase
         $response->assertSee('(General Matrix Assigned)');
     }
 
+    public function test_upload_succeeds_when_only_non_fixed_slots_are_unassigned(): void
+    {
+        $user = $this->createAcademicHead();
+        $proctor = $this->createProctor();
+        $program = $this->createProgram();
+
+        $section = Section::query()->create([
+            'program_id' => $program->id,
+            'year_level' => 1,
+            'section_code' => 'BSCS-1A',
+        ]);
+
+        $subject = Subject::query()->create([
+            'code' => 'CS101',
+            'course_serial_number' => 'CSN-CS101',
+            'name' => 'Introduction to Computing',
+            'units' => 3,
+        ]);
+
+        DB::table('program_subjects')->insert([
+            'program_id' => $program->id,
+            'subject_id' => $subject->id,
+            'year_level' => 1,
+            'semester' => 1,
+        ]);
+
+        $matrix = $this->createUploadedMatrix($program, $user);
+
+        $fixedMatrixSlot = ExamMatrixSlot::query()->create([
+            'exam_matrix_id' => $matrix->id,
+            'slot_date' => '2026-04-01',
+            'start_time' => '07:00:00',
+            'end_time' => '08:30:00',
+            'is_fixed' => true,
+            'sort_order' => 1,
+        ]);
+
+        ExamMatrixSlotSubject::query()->create([
+            'exam_matrix_slot_id' => $fixedMatrixSlot->id,
+            'subject_id' => $subject->id,
+            'sort_order' => 1,
+        ]);
+
+        $nonFixedMatrixSlot = ExamMatrixSlot::query()->create([
+            'exam_matrix_id' => $matrix->id,
+            'slot_date' => '2026-04-01',
+            'start_time' => '08:30:00',
+            'end_time' => '10:00:00',
+            'is_fixed' => false,
+            'sort_order' => 2,
+        ]);
+
+        $schedule = SectionExamSchedule::query()->create([
+            'exam_matrix_id' => $matrix->id,
+            'section_id' => $section->id,
+            'academic_year' => $matrix->academic_year,
+            'semester' => $matrix->semester,
+            'exam_period' => $matrix->exam_period,
+            'program_id' => $program->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
+        ]);
+
+        $room = Room::query()->create([
+            'name' => 'Room 101',
+            'capacity' => 40,
+            'is_available' => true,
+        ]);
+
+        $fixedScheduleSlot = SectionExamScheduleSlot::query()->create([
+            'section_exam_schedule_id' => $schedule->id,
+            'exam_matrix_slot_id' => $fixedMatrixSlot->id,
+            'slot_date' => '2026-04-01',
+            'start_time' => '07:00:00',
+            'end_time' => '08:30:00',
+            'is_fixed' => true,
+            'subject_id' => $subject->id,
+            'room_id' => $room->id,
+            'is_manual_assignment' => false,
+        ]);
+        $fixedScheduleSlot->proctors()->attach($proctor->id);
+
+        SectionExamScheduleSlot::query()->create([
+            'section_exam_schedule_id' => $schedule->id,
+            'exam_matrix_slot_id' => $nonFixedMatrixSlot->id,
+            'slot_date' => '2026-04-01',
+            'start_time' => '08:30:00',
+            'end_time' => '10:00:00',
+            'is_fixed' => false,
+            'subject_id' => null,
+            'room_id' => null,
+            'is_manual_assignment' => false,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->post(route('academic-head.schedules.upload', $schedule));
+
+        $response->assertRedirect(route('academic-head.schedules.index', [
+            'semester' => 1,
+            'exam_period' => 'Prelim',
+            'program_id' => $program->id,
+            'year_level' => 1,
+            'section_id' => $section->id,
+        ]));
+
+        $schedule->refresh();
+        $this->assertSame('published', $schedule->status);
+    }
+
+    public function test_upload_fails_with_slot_context_when_fixed_slot_subject_is_missing(): void
+    {
+        $user = $this->createAcademicHead();
+        $program = $this->createProgram();
+        $section = Section::query()->create([
+            'program_id' => $program->id,
+            'year_level' => 1,
+            'section_code' => 'BSCS-1A',
+        ]);
+
+        $matrix = $this->createUploadedMatrix($program, $user);
+        $fixedMatrixSlot = ExamMatrixSlot::query()->create([
+            'exam_matrix_id' => $matrix->id,
+            'slot_date' => '2026-04-01',
+            'start_time' => '07:00:00',
+            'end_time' => '08:30:00',
+            'is_fixed' => true,
+            'sort_order' => 1,
+        ]);
+
+        $schedule = SectionExamSchedule::query()->create([
+            'exam_matrix_id' => $matrix->id,
+            'section_id' => $section->id,
+            'academic_year' => $matrix->academic_year,
+            'semester' => $matrix->semester,
+            'exam_period' => $matrix->exam_period,
+            'program_id' => $program->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
+        ]);
+
+        SectionExamScheduleSlot::query()->create([
+            'section_exam_schedule_id' => $schedule->id,
+            'exam_matrix_slot_id' => $fixedMatrixSlot->id,
+            'slot_date' => '2026-04-01',
+            'start_time' => '07:00:00',
+            'end_time' => '08:30:00',
+            'is_fixed' => true,
+            'subject_id' => null,
+            'room_id' => null,
+            'is_manual_assignment' => false,
+        ]);
+
+        $indexUrl = route('academic-head.schedules.index', [
+            'semester' => 1,
+            'exam_period' => 'Prelim',
+            'program_id' => $program->id,
+            'year_level' => 1,
+            'section_id' => $section->id,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->from($indexUrl)
+            ->post(route('academic-head.schedules.upload', $schedule));
+
+        $response->assertRedirect($indexUrl);
+        $response->assertSessionHasErrors('publish');
+        $this->assertStringContainsString(
+            'First unresolved slot: 2026-04-01 07:00-08:30.',
+            session('errors')->first('publish')
+        );
+
+        $schedule->refresh();
+        $this->assertSame('draft', $schedule->status);
+    }
+
+    public function test_schedules_index_shows_upload_blockers_and_slot_context(): void
+    {
+        $user = $this->createAcademicHead();
+        $program = $this->createProgram();
+        $this->createAcademicSetting('2025-2026', '1st Semester', 'Prelim');
+
+        $section = Section::query()->create([
+            'program_id' => $program->id,
+            'year_level' => 1,
+            'section_code' => 'BSCS-1A',
+        ]);
+
+        $matrix = $this->createUploadedMatrix($program, $user);
+        $fixedMatrixSlot = ExamMatrixSlot::query()->create([
+            'exam_matrix_id' => $matrix->id,
+            'slot_date' => '2026-04-01',
+            'start_time' => '07:00:00',
+            'end_time' => '08:30:00',
+            'is_fixed' => true,
+            'sort_order' => 1,
+        ]);
+
+        $schedule = SectionExamSchedule::query()->create([
+            'exam_matrix_id' => $matrix->id,
+            'section_id' => $section->id,
+            'academic_year' => '2025-2026',
+            'semester' => 1,
+            'exam_period' => 'Prelim',
+            'program_id' => $program->id,
+            'status' => 'draft',
+            'created_by' => $user->id,
+        ]);
+
+        SectionExamScheduleSlot::query()->create([
+            'section_exam_schedule_id' => $schedule->id,
+            'exam_matrix_slot_id' => $fixedMatrixSlot->id,
+            'slot_date' => '2026-04-01',
+            'start_time' => '07:00:00',
+            'end_time' => '08:30:00',
+            'is_fixed' => true,
+            'subject_id' => null,
+            'room_id' => null,
+            'is_manual_assignment' => false,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('academic-head.schedules.index', [
+                'semester' => 1,
+                'exam_period' => 'Prelim',
+                'program_id' => $program->id,
+                'year_level' => 1,
+                'section_id' => $section->id,
+            ]));
+
+        $response->assertOk();
+        $response->assertSee('Upload blocked: 1 issue(s) found.');
+        $response->assertSee('Fixed slots missing subjects (1):');
+        $response->assertSee('2026-04-01 07:00-08:30');
+        $response->assertSee('Resolve upload blockers listed below before publishing.', false);
+    }
+
     private function createAcademicHead(): User
     {
         return User::factory()->create([
             'role' => 'academic_head',
             'status' => 'active',
+        ]);
+    }
+
+    private function createProctor(): User
+    {
+        return User::factory()->create([
+            'role' => 'proctor',
+            'status' => 'active',
+        ]);
+    }
+
+    private function createAcademicSetting(string $academicYear, string $semester, string $examPeriod): AcademicSetting
+    {
+        return AcademicSetting::query()->create([
+            'academic_year' => $academicYear,
+            'semester' => $semester,
+            'exam_period' => $examPeriod,
         ]);
     }
 

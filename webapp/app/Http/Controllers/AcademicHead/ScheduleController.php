@@ -21,7 +21,7 @@ use Illuminate\View\View;
 
 class ScheduleController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, ScheduleService $service): View
     {
         $setting = AcademicSetting::current();
         $settingSemester = $this->normalizeSemester($setting?->semester) ?? 1;
@@ -55,6 +55,7 @@ class ScheduleController extends Controller
         }
 
         $selectedSchedule = null;
+        $publishReadiness = null;
         $matchingMatrix = null;
 
         if ($filters['program_id'] && $filters['section_id'] && $filters['exam_period'] !== '') {
@@ -74,6 +75,10 @@ class ScheduleController extends Controller
                 ->where('status', 'uploaded')
                 ->latest()
                 ->first();
+
+            if ($selectedSchedule && $selectedSchedule->status === 'draft') {
+                $publishReadiness = $service->getPublishReadiness($selectedSchedule);
+            }
         }
 
         $sectionsJson = $sections->map(fn (Section $section): array => [
@@ -91,6 +96,7 @@ class ScheduleController extends Controller
             'sectionsJson' => $sectionsJson,
             'selectedSection' => $selectedSection,
             'selectedSchedule' => $selectedSchedule,
+            'publishReadiness' => $publishReadiness,
             'matchingMatrix' => $matchingMatrix,
             'settingSemester' => $settingSemester,
         ]);

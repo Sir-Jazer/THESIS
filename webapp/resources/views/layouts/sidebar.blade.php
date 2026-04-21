@@ -81,6 +81,72 @@
                 'icon' => 'reports',
             ],
         ],
+        'student' => [
+            [
+                'label' => 'Dashboard',
+                'href' => route('student.dashboard'),
+                'active' => request()->routeIs('student.dashboard'),
+                'icon' => 'home',
+            ],
+            [
+                'label' => 'My Subjects',
+                'href' => route('student.subjects.index'),
+                'active' => request()->routeIs('student.subjects.*'),
+                'icon' => 'subjects',
+            ],
+            [
+                'label' => 'My Permit',
+                'href' => route('student.permit.show'),
+                'active' => request()->routeIs('student.permit.*'),
+                'icon' => 'reports',
+            ],
+        ],
+        'cashier' => [
+            [
+                'label' => 'Dashboard',
+                'href' => route('cashier.dashboard'),
+                'active' => request()->routeIs('cashier.dashboard'),
+                'icon' => 'home',
+            ],
+            [
+                'label' => 'Student Payments',
+                'href' => route('cashier.student-payments.index'),
+                'active' => request()->routeIs('cashier.student-payments.*'),
+                'icon' => 'subjects',
+            ],
+        ],
+        'proctor' => [
+            [
+                'label' => 'Dashboard',
+                'href' => route('proctor.dashboard'),
+                'active' => request()->routeIs('proctor.dashboard'),
+                'icon' => 'home',
+            ],
+            [
+                'label' => 'QR Scanner',
+                'href' => route('proctor.scanner.show'),
+                'active' => request()->routeIs('proctor.scanner.*'),
+                'icon' => 'qr',
+            ],
+            [
+                'label' => 'Exam Schedules',
+                'href' => route('proctor.schedules.index'),
+                'active' => request()->routeIs('proctor.schedules.*'),
+                'icon' => 'schedules',
+            ],
+            [
+                'label' => 'My Advisees',
+                'href' => route('proctor.advisees.index'),
+                'active' => request()->routeIs('proctor.advisees.*'),
+                'icon' => 'users',
+            ],
+            [
+                'label' => 'Pending Registrations',
+                'href' => route('proctor.pending-registrations.index'),
+                'active' => request()->routeIs('proctor.pending-registrations.*'),
+                'icon' => 'pending',
+            ],
+        ],
         default => [
             [
                 'label' => 'Dashboard',
@@ -187,6 +253,20 @@
                                 <path d="M14 2v6h6" />
                                 <path d="M8 13h8" />
                                 <path d="M8 17h6" />
+                            </svg>
+                        @elseif ($item['icon'] === 'qr')
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                                <rect x="3" y="3" width="7" height="7" rx="1" />
+                                <rect x="14" y="3" width="7" height="7" rx="1" />
+                                <rect x="3" y="14" width="7" height="7" rx="1" />
+                                <path d="M14 14h3v3h-3z" />
+                                <path d="M17 17h4" />
+                                <path d="M17 21v-4" />
+                            </svg>
+                        @elseif ($item['icon'] === 'pending')
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 7v5l3 3" />
                             </svg>
                         @else
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">

@@ -112,6 +112,8 @@
                 </div>
             @else
                 @php($schedule = $selectedSchedule)
+                @php($readiness = $publishReadiness)
+                @php($hasPublishBlockers = $schedule->status === 'draft' && ($readiness['has_blockers'] ?? false))
                 <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
                     <div class="border-b px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div>
@@ -128,7 +130,12 @@
 
                             <form method="POST" action="{{ route('academic-head.schedules.upload', $schedule) }}">
                                 @csrf
-                                <button type="submit" class="px-3 py-2 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-600" @disabled($schedule->status === 'published')>Upload Schedule</button>
+                                <button
+                                    type="submit"
+                                    class="px-3 py-2 text-xs rounded bg-emerald-600 text-white hover:bg-emerald-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-600"
+                                    @disabled($schedule->status === 'published' || $hasPublishBlockers)
+                                    title="{{ $hasPublishBlockers ? 'Resolve upload blockers listed below before publishing.' : '' }}"
+                                >Upload Schedule</button>
                             </form>
 
                             <form method="POST" action="{{ route('academic-head.schedules.reset', $schedule) }}">
@@ -143,6 +150,49 @@
                             </form>
                         </div>
                     </div>
+
+                    @if ($schedule->status === 'draft')
+                        <div class="border-b px-4 py-3">
+                            @if ($hasPublishBlockers)
+                                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                    <p class="font-semibold">Upload blocked: {{ $readiness['total_blockers'] }} issue(s) found.</p>
+                                    <p class="mt-1 text-xs">Non-fixed slots can stay unassigned, but fixed slots need subjects and assigned subjects need room and proctor.</p>
+
+                                    @if (! empty($readiness['missing_fixed_subjects']))
+                                        <p class="mt-2 font-semibold">Fixed slots missing subjects ({{ count($readiness['missing_fixed_subjects']) }}):</p>
+                                        <ul class="mt-1 list-disc list-inside space-y-1 text-xs">
+                                            @foreach (array_slice($readiness['missing_fixed_subjects'], 0, 3) as $slotLabel)
+                                                <li>{{ $slotLabel }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+
+                                    @if (! empty($readiness['assigned_without_room']))
+                                        <p class="mt-2 font-semibold">Assigned subjects without room ({{ count($readiness['assigned_without_room']) }}):</p>
+                                        <ul class="mt-1 list-disc list-inside space-y-1 text-xs">
+                                            @foreach (array_slice($readiness['assigned_without_room'], 0, 3) as $slotLabel)
+                                                <li>{{ $slotLabel }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+
+                                    @if (! empty($readiness['assigned_without_proctor']))
+                                        <p class="mt-2 font-semibold">Assigned subjects without proctor ({{ count($readiness['assigned_without_proctor']) }}):</p>
+                                        <ul class="mt-1 list-disc list-inside space-y-1 text-xs">
+                                            @foreach (array_slice($readiness['assigned_without_proctor'], 0, 3) as $slotLabel)
+                                                <li>{{ $slotLabel }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+                                </div>
+                            @else
+                                <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                                    <p class="font-semibold">Ready for upload.</p>
+                                    <p class="mt-1 text-xs">All fixed slots have subjects, and all assigned subjects have room and proctor.</p>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
 
                     @include('academic-head.schedules.partials.schedule-table', ['schedule' => $schedule])
                 </div>

@@ -51,4 +51,9 @@ class SectionExamScheduleSlot extends Model
     {
         return $this->belongsToMany(User::class, 'section_exam_schedule_slot_proctors', 'section_exam_schedule_slot_id', 'proctor_id')->withTimestamps();
     }
+
+    public function attendances()
+    {
+        return $this->hasMany(ExamAttendance::class, 'section_exam_schedule_slot_id');
+    }
 }

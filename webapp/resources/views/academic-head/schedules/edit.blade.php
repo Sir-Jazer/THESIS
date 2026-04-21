@@ -88,7 +88,7 @@
                                     <tr class="border-t align-top js-slot-row" data-slot-id="{{ $slot->id }}">
                                         <td class="px-3 py-2 whitespace-nowrap">{{ substr((string) $slot->start_time, 0, 5) }}-{{ substr((string) $slot->end_time, 0, 5) }}</td>
                                         <td class="px-3 py-2">
-                                            <form method="POST" action="{{ route('academic-head.schedules.slots.update', $slot) }}" class="js-slot-form space-y-2" data-slot-id="{{ $slot->id }}">
+                                            <form id="slot-form-{{ $slot->id }}" method="POST" action="{{ route('academic-head.schedules.slots.update', $slot) }}" class="js-slot-form space-y-2" data-slot-id="{{ $slot->id }}">
                                                 @csrf
                                                 @method('PATCH')
                                                 <select
@@ -114,7 +114,7 @@
                                                 </select>
                                         </td>
                                         <td class="px-3 py-2">
-                                                <select name="room_id" class="w-56 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
+                                                <select name="room_id" form="slot-form-{{ $slot->id }}" class="w-56 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
                                                     <option value="">Unassigned</option>
                                                     @foreach ($rooms as $room)
                                                         @php
@@ -136,7 +136,7 @@
                                                 </select>
                                         </td>
                                         <td class="px-3 py-2">
-                                                <select name="proctor_ids[]" multiple class="w-72 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
+                                                <select name="proctor_ids[]" multiple form="slot-form-{{ $slot->id }}" class="w-72 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
                                                     @foreach ($proctors as $proctor)
                                                         @php($proctorId = (int) $proctor->id)
                                                         <option value="{{ $proctor->id }}"
@@ -148,7 +148,7 @@
                                                 </select>
                                         </td>
                                         <td class="px-3 py-2">
-                                                <button type="submit" class="px-3 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" @disabled($schedule->status === 'published')>
+                                                <button type="submit" form="slot-form-{{ $slot->id }}" class="px-3 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" @disabled($schedule->status === 'published')>
                                                     Save Slot
                                                 </button>
                                             </form>
@@ -222,15 +222,12 @@
                         return;
                     }
 
+                    // Room and proctor selects live outside the <form> element (in sibling <td> cells).
+                    // Use the row to find them instead of querying inside the form element.
+                    const row = document.querySelector(`tr.js-slot-row[data-slot-id="${slotId}"]`);
                     const subjectSelect = slotForm.querySelector('select[name="subject_id"]');
-                    const roomSelect = slotForm.querySelector('select[name="room_id"]');
-                    const proctorSelect = slotForm.querySelector('select[name="proctor_ids[]"]');
-
-                    const subjectInput = document.createElement('input');
-                    subjectInput.type = 'hidden';
-                    subjectInput.name = `slots[${slotId}][subject_id]`;
-                    subjectInput.value = subjectSelect ? subjectSelect.value : '';
-                    payloadContainer.appendChild(subjectInput);
+                    const roomSelect = row ? row.querySelector('select[name="room_id"]') : null;
+                    const proctorSelect = row ? row.querySelector('select[name="proctor_ids[]"]') : null;
 
                     const roomInput = document.createElement('input');
                     roomInput.type = 'hidden';

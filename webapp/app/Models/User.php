@@ -55,4 +55,6 @@ class User extends Authenticatable
     public function assignedExamSlots() { return $this->belongsToMany(SectionExamScheduleSlot::class, 'section_exam_schedule_slot_proctors', 'proctor_id', 'section_exam_schedule_slot_id')->withTimestamps(); }
     public function createdExamMatrices() { return $this->hasMany(ExamMatrix::class, 'created_by'); }
     public function publishedExamSchedules() { return $this->hasMany(SectionExamSchedule::class, 'published_by'); }
+    public function generatedExamPermits() { return $this->hasMany(ExamPermit::class, 'generated_by'); }
+    public function loggedExamAttendances() { return $this->hasMany(ExamAttendance::class, 'logged_by'); }
 }

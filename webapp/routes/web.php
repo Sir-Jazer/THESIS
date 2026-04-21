@@ -13,9 +13,16 @@ use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\SubjectController as AdminSubjectController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Cashier\DashboardController as CashierDashboardController;
+use App\Http\Controllers\Cashier\StudentPaymentController as CashierStudentPaymentController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Proctor\AdviseeController as ProctorAdviseeController;
 use App\Http\Controllers\Proctor\DashboardController as ProctorDashboardController;
+use App\Http\Controllers\Proctor\PendingRegistrationController as ProctorPendingRegistrationController;
+use App\Http\Controllers\Proctor\ScheduleController as ProctorScheduleController;
+use App\Http\Controllers\Proctor\ScannerController as ProctorScannerController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
+use App\Http\Controllers\Student\PermitController as StudentPermitController;
+use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -40,16 +47,29 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::middleware('role:student')->group(function () {
-        Route::get('/student/dashboard', StudentDashboardController::class)->name('student.dashboard');
+    Route::middleware('role:student')->prefix('student')->name('student.')->group(function () {
+        Route::get('/dashboard', StudentDashboardController::class)->name('dashboard');
+        Route::get('/subjects', [StudentSubjectController::class, 'index'])->name('subjects.index');
+        Route::get('/permit', [StudentPermitController::class, 'show'])->name('permit.show');
     });
 
-    Route::middleware('role:proctor')->group(function () {
-        Route::get('/proctor/dashboard', ProctorDashboardController::class)->name('proctor.dashboard');
+    Route::middleware('role:proctor')->prefix('proctor')->name('proctor.')->group(function () {
+        Route::get('/dashboard', ProctorDashboardController::class)->name('dashboard');
+        Route::get('/scanner', [ProctorScannerController::class, 'show'])->name('scanner.show');
+        Route::post('/scanner/scan', [ProctorScannerController::class, 'scan'])->name('scanner.scan');
+        Route::get('/schedules', [ProctorScheduleController::class, 'index'])->name('schedules.index');
+        Route::get('/schedules/slots/{slot}/attendance', [ProctorScheduleController::class, 'attendance'])->name('schedules.attendance');
+        Route::get('/advisees', [ProctorAdviseeController::class, 'index'])->name('advisees.index');
+        Route::get('/pending-registrations', [ProctorPendingRegistrationController::class, 'index'])->name('pending-registrations.index');
+        Route::post('/pending-registrations/{user}/approve', [ProctorPendingRegistrationController::class, 'approve'])->name('pending-registrations.approve');
+        Route::post('/pending-registrations/{user}/reject', [ProctorPendingRegistrationController::class, 'reject'])->name('pending-registrations.reject');
     });
 
-    Route::middleware('role:cashier')->group(function () {
-        Route::get('/cashier/dashboard', CashierDashboardController::class)->name('cashier.dashboard');
+    Route::middleware('role:cashier')->prefix('cashier')->name('cashier.')->group(function () {
+        Route::get('/dashboard', CashierDashboardController::class)->name('dashboard');
+        Route::get('/student-payments', [CashierStudentPaymentController::class, 'index'])->name('student-payments.index');
+        Route::post('/student-payments/{studentProfile}/generate', [CashierStudentPaymentController::class, 'generate'])->name('student-payments.generate');
+        Route::patch('/student-payments/{studentProfile}/revoke', [CashierStudentPaymentController::class, 'revoke'])->name('student-payments.revoke');
     });
 
     Route::middleware('role:academic_head')->group(function () {
