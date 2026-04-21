@@ -249,38 +249,6 @@ class ScheduleService
         });
     }
 
-    public function assignSlot(SectionExamScheduleSlot $slot, array $payload): SectionExamScheduleSlot
-    {
-        $slot->loadMissing(['schedule.section.students.user.subjects', 'proctors']);
-
-        if ($slot->schedule->isPublished()) {
-            throw ValidationException::withMessages([
-                'slot' => 'Published schedules must be reset before editing assignments.',
-            ]);
-        }
-
-        $subjectId = Arr::get($payload, 'subject_id');
-        $roomId = Arr::get($payload, 'room_id');
-        $proctorIds = collect(Arr::get($payload, 'proctor_ids', []))->map(fn ($id) => (int) $id)->unique()->values();
-
-        $this->validateSubjectEligibility($slot, $subjectId);
-        $this->assertRoomAvailability($slot, $roomId);
-        $this->assertProctorAvailability($slot, $proctorIds);
-        $this->assertRoomCapacity($slot, $roomId);
-
-        DB::transaction(function () use ($slot, $subjectId, $roomId, $proctorIds): void {
-            $slot->update([
-                'subject_id' => $subjectId,
-                'room_id' => $roomId,
-                'is_manual_assignment' => true,
-            ]);
-
-            $slot->proctors()->sync($proctorIds->all());
-        });
-
-        return $slot->fresh(['subject', 'room', 'proctors', 'schedule']);
-    }
-
     public function saveDraftBatch(SectionExamSchedule $schedule, array $slotsData): SectionExamSchedule
     {
         $schedule->loadMissing(['section', 'slots.proctors', 'slots.schedule.section']);

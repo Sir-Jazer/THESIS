@@ -86,20 +86,30 @@
                     x-show="profileOpen"
                     x-transition.origin.top.right
                     @click.outside="profileOpen = false"
-                    class="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
+                    class="portal-profile-menu absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl"
                     x-cloak
                 >
-                    <div class="border-b border-slate-100 px-4 py-3">
-                        <p class="text-sm font-semibold text-slate-700">{{ Auth::user()->full_name }}</p>
-                        <p class="text-xs text-slate-500">{{ Auth::user()->email }}</p>
+                    <div class="portal-profile-menu-head px-4 py-3">
+                        <p class="text-sm font-semibold">{{ Auth::user()->full_name }}</p>
+                        <p class="text-xs">{{ Auth::user()->email }}</p>
                     </div>
                     <div class="py-1.5">
-                        <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm text-slate-600 transition hover:bg-blue-50 hover:text-blue-700">
+                        <button
+                            type="button"
+                            @click="toggleTheme()"
+                            class="portal-profile-menu-item flex w-full items-center justify-between px-4 py-2 text-sm"
+                            :aria-pressed="(theme === 'dark').toString()"
+                        >
+                            <span>Dark Mode</span>
+                            <span class="portal-theme-pill" :class="theme === 'dark' ? 'portal-theme-pill-on' : 'portal-theme-pill-off'" x-text="theme === 'dark' ? 'On' : 'Off'"></span>
+                        </button>
+
+                        <a href="{{ route('profile.edit') }}" class="portal-profile-menu-item block px-4 py-2 text-sm">
                             Profile Information
                         </a>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button type="submit" class="block w-full px-4 py-2 text-left text-sm text-slate-600 transition hover:bg-red-50 hover:text-red-700">
+                            <button type="submit" class="portal-profile-menu-item portal-profile-menu-item-danger block w-full px-4 py-2 text-left text-sm">
                                 Log Out
                             </button>
                         </form>

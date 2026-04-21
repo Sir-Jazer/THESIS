@@ -63,7 +63,6 @@
                                 <th class="px-3 py-2 text-left">Subject</th>
                                 <th class="px-3 py-2 text-left">Room</th>
                                 <th class="px-3 py-2 text-left">Proctor</th>
-                                <th class="px-3 py-2 text-left">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -75,7 +74,7 @@
 
                             @foreach ($slotsByDate as $slotDate => $slots)
                                 <tr class="bg-slate-200 border-t border-slate-300">
-                                    <td class="px-3 py-2 font-semibold text-slate-800" colspan="5">Day {{ $dayCounter }} - {{ $slotDate }}</td>
+                                    <td class="px-3 py-2 font-semibold text-slate-800" colspan="4">Day {{ $dayCounter }} - {{ $slotDate }}</td>
                                 </tr>
 
                                 @foreach ($slots as $slot)
@@ -88,70 +87,61 @@
                                     <tr class="border-t align-top js-slot-row" data-slot-id="{{ $slot->id }}">
                                         <td class="px-3 py-2 whitespace-nowrap">{{ substr((string) $slot->start_time, 0, 5) }}-{{ substr((string) $slot->end_time, 0, 5) }}</td>
                                         <td class="px-3 py-2">
-                                            <form id="slot-form-{{ $slot->id }}" method="POST" action="{{ route('academic-head.schedules.slots.update', $slot) }}" class="js-slot-form space-y-2" data-slot-id="{{ $slot->id }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <select
-                                                    name="subject_id"
-                                                    class="w-72 rounded-md border-gray-300 text-sm transition-colors"
-                                                    data-slot-subject-select="true"
-                                                    data-matrix-subject-ids='@json($matrixSubjectIds)'
-                                                    style="{{ $isMatrixAssignedSelection ? 'background-color:#fef9c3;border-color:#f59e0b;color:#78350f;font-weight:600;' : '' }}"
-                                                    @disabled($schedule->status === 'published')
-                                                >
-                                                    <option value="">Unassigned</option>
-                                                    @foreach ($subjectOptions as $subjectOption)
-                                                        @php
-                                                            $isMatrixOption = in_array((int) $subjectOption['id'], $matrixSubjectIds, true);
-                                                        @endphp
-                                                        <option value="{{ $subjectOption['id'] }}"
-                                                            @selected((int) $slot->subject_id === (int) $subjectOption['id'])
-                                                            style="{{ $isMatrixOption ? 'background-color:#fef9c3;font-weight:600;' : '' }}">
-                                                            {{ $subjectOption['code'] }} | {{ $subjectOption['course_serial_number'] ?: 'No Serial' }} - {{ $subjectOption['name'] }}
-                                                            {{ $isMatrixOption ? '(General Matrix Assigned)' : '' }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
+                                            <select
+                                                name="subject_id"
+                                                class="w-72 rounded-md border-gray-300 text-sm transition-colors"
+                                                data-slot-subject-select="true"
+                                                data-matrix-subject-ids='@json($matrixSubjectIds)'
+                                                style="{{ $isMatrixAssignedSelection ? 'background-color:#fef9c3;border-color:#f59e0b;color:#78350f;font-weight:600;' : '' }}"
+                                                @disabled($schedule->status === 'published')
+                                            >
+                                                <option value="">Unassigned</option>
+                                                @foreach ($subjectOptions as $subjectOption)
+                                                    @php
+                                                        $isMatrixOption = in_array((int) $subjectOption['id'], $matrixSubjectIds, true);
+                                                    @endphp
+                                                    <option value="{{ $subjectOption['id'] }}"
+                                                        @selected((int) $slot->subject_id === (int) $subjectOption['id'])
+                                                        style="{{ $isMatrixOption ? 'background-color:#fef9c3;font-weight:600;' : '' }}">
+                                                        {{ $subjectOption['code'] }} | {{ $subjectOption['course_serial_number'] ?: 'No Serial' }} - {{ $subjectOption['name'] }}
+                                                        {{ $isMatrixOption ? '(General Matrix Assigned)' : '' }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </td>
                                         <td class="px-3 py-2">
-                                                <select name="room_id" form="slot-form-{{ $slot->id }}" class="w-56 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
-                                                    <option value="">Unassigned</option>
-                                                    @foreach ($rooms as $room)
-                                                        @php
-                                                            $roomId = (int) $room->id;
-                                                            $isConflictRoom = in_array($roomId, $roomAvailability['conflict'] ?? [], true);
-                                                            $isCapacityRoom = in_array($roomId, $roomAvailability['capacity'] ?? [], true);
-                                                            $isUnavailableRoom = $isConflictRoom || $isCapacityRoom;
-                                                            $reasonLabel = $isConflictRoom
-                                                                ? 'Unavailable: conflict'
-                                                                : ($isCapacityRoom ? 'Unavailable: capacity' : null);
-                                                        @endphp
-                                                        <option value="{{ $room->id }}"
-                                                            @selected((int) $slot->room_id === $roomId)
-                                                            @disabled($isUnavailableRoom)
-                                                        >
-                                                            {{ $room->name }} ({{ $room->capacity }}){{ $reasonLabel ? ' - ' . $reasonLabel : '' }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
+                                            <select name="room_id" class="w-56 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
+                                                <option value="">Unassigned</option>
+                                                @foreach ($rooms as $room)
+                                                    @php
+                                                        $roomId = (int) $room->id;
+                                                        $isConflictRoom = in_array($roomId, $roomAvailability['conflict'] ?? [], true);
+                                                        $isCapacityRoom = in_array($roomId, $roomAvailability['capacity'] ?? [], true);
+                                                        $isUnavailableRoom = $isConflictRoom || $isCapacityRoom;
+                                                        $reasonLabel = $isConflictRoom
+                                                            ? 'Unavailable: conflict'
+                                                            : ($isCapacityRoom ? 'Unavailable: capacity' : null);
+                                                    @endphp
+                                                    <option value="{{ $room->id }}"
+                                                        @selected((int) $slot->room_id === $roomId)
+                                                        @disabled($isUnavailableRoom)
+                                                    >
+                                                        {{ $room->name }} ({{ $room->capacity }}){{ $reasonLabel ? ' - ' . $reasonLabel : '' }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </td>
                                         <td class="px-3 py-2">
-                                                <select name="proctor_ids[]" multiple form="slot-form-{{ $slot->id }}" class="w-72 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
-                                                    @foreach ($proctors as $proctor)
-                                                        @php($proctorId = (int) $proctor->id)
-                                                        <option value="{{ $proctor->id }}"
-                                                            @selected($slot->proctors->contains('id', $proctor->id))
-                                                            @disabled(in_array($proctorId, $proctorUnavailable, true))>
-                                                            {{ $proctor->full_name }}{{ in_array($proctorId, $proctorUnavailable, true) ? ' - Unavailable' : '' }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                        </td>
-                                        <td class="px-3 py-2">
-                                                <button type="submit" form="slot-form-{{ $slot->id }}" class="px-3 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700" @disabled($schedule->status === 'published')>
-                                                    Save Slot
-                                                </button>
-                                            </form>
+                                            <select name="proctor_ids[]" multiple class="w-72 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
+                                                @foreach ($proctors as $proctor)
+                                                    @php($proctorId = (int) $proctor->id)
+                                                    <option value="{{ $proctor->id }}"
+                                                        @selected($slot->proctors->contains('id', $proctor->id))
+                                                        @disabled(in_array($proctorId, $proctorUnavailable, true))>
+                                                        {{ $proctor->full_name }}{{ in_array($proctorId, $proctorUnavailable, true) ? ' - Unavailable' : '' }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -176,7 +166,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             const draftForm = document.getElementById('save-draft-form');
             const payloadContainer = document.getElementById('save-draft-payload');
-            const slotForms = document.querySelectorAll('.js-slot-form');
+            const slotRows = document.querySelectorAll('tr.js-slot-row[data-slot-id]');
             if (!draftForm || !payloadContainer) {
                 return;
             }
@@ -216,18 +206,21 @@
             draftForm.addEventListener('submit', function () {
                 payloadContainer.innerHTML = '';
 
-                slotForms.forEach((slotForm) => {
-                    const slotId = slotForm.getAttribute('data-slot-id');
+                slotRows.forEach((row) => {
+                    const slotId = row.getAttribute('data-slot-id');
                     if (!slotId) {
                         return;
                     }
 
-                    // Room and proctor selects live outside the <form> element (in sibling <td> cells).
-                    // Use the row to find them instead of querying inside the form element.
-                    const row = document.querySelector(`tr.js-slot-row[data-slot-id="${slotId}"]`);
-                    const subjectSelect = slotForm.querySelector('select[name="subject_id"]');
-                    const roomSelect = row ? row.querySelector('select[name="room_id"]') : null;
-                    const proctorSelect = row ? row.querySelector('select[name="proctor_ids[]"]') : null;
+                    const subjectSelect = row.querySelector('select[name="subject_id"]');
+                    const roomSelect = row.querySelector('select[name="room_id"]');
+                    const proctorSelect = row.querySelector('select[name="proctor_ids[]"]');
+
+                    const subjectInput = document.createElement('input');
+                    subjectInput.type = 'hidden';
+                    subjectInput.name = `slots[${slotId}][subject_id]`;
+                    subjectInput.value = subjectSelect ? subjectSelect.value : '';
+                    payloadContainer.appendChild(subjectInput);
 
                     const roomInput = document.createElement('input');
                     roomInput.type = 'hidden';

@@ -9,7 +9,6 @@ use App\Models\Program;
 use App\Models\Room;
 use App\Models\Section;
 use App\Models\SectionExamSchedule;
-use App\Models\SectionExamScheduleSlot;
 use App\Models\Subject;
 use App\Models\User;
 use App\Services\AcademicHead\ScheduleService;
@@ -334,20 +333,6 @@ class ScheduleController extends Controller
             'year_level' => $section->year_level,
             'section_id' => $section->id,
         ])->with('status', 'Draft schedule generated successfully.');
-    }
-
-    public function updateSlot(Request $request, SectionExamScheduleSlot $slot, ScheduleService $service): RedirectResponse
-    {
-        $validated = $request->validate([
-            'subject_id' => ['nullable', 'exists:subjects,id'],
-            'room_id' => ['nullable', 'exists:rooms,id'],
-            'proctor_ids' => ['nullable', 'array'],
-            'proctor_ids.*' => ['integer', Rule::exists('users', 'id')->where('role', 'proctor')],
-        ]);
-
-        $service->assignSlot($slot, $validated);
-
-        return back()->with('status', 'Schedule slot updated successfully.');
     }
 
     public function saveDraft(Request $request, SectionExamSchedule $schedule, ScheduleService $service): RedirectResponse

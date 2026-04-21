@@ -19,6 +19,7 @@ class User extends Authenticatable
         'password',
         'role',
         'status',
+        'theme_preference',
         'employee_id',
     ];
 
@@ -32,6 +33,13 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
         ];
+    }
+
+    public function getResolvedThemeAttribute(): string
+    {
+        return in_array($this->theme_preference, ['light', 'dark'], true)
+            ? $this->theme_preference
+            : 'light';
     }
 
     public function getFullNameAttribute(): string

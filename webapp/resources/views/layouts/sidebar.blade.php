@@ -174,14 +174,14 @@
 @endphp
 
 <aside
-    class="portal-sidebar fixed inset-y-0 left-0 z-40 w-72 -translate-x-full border-r border-slate-200 bg-white transition-all duration-300 lg:translate-x-0"
+    class="portal-sidebar fixed inset-y-0 left-0 z-40 w-72 -translate-x-full transition-all duration-300 lg:translate-x-0"
     :class="[
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         sidebarCollapsed ? 'lg:w-20' : 'lg:w-72'
     ]"
 >
     <div class="flex h-full flex-col pt-16">
-        <div class="border-b border-slate-100 px-4 py-4" :class="sidebarCollapsed ? 'lg:px-3' : 'lg:px-4'">
+        <div class="portal-sidebar-divider-bottom px-4 py-4" :class="sidebarCollapsed ? 'lg:px-3' : 'lg:px-4'">
             <p class="portal-sidebar-role" :class="sidebarCollapsed ? 'lg:hidden' : 'lg:block'">{{ $roleLabel }}</p>
         </div>
 
@@ -281,7 +281,7 @@
             @endforeach
         </nav>
 
-        <div class="border-t border-slate-100 p-3" :class="sidebarCollapsed ? 'lg:px-2' : 'lg:px-3'">
+        <div class="portal-sidebar-divider-top p-3" :class="sidebarCollapsed ? 'lg:px-2' : 'lg:px-3'">
             <a
                 href="{{ route('profile.edit') }}"
                 @click="if (window.innerWidth < 1024) sidebarOpen = false"

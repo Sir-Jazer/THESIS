@@ -23,6 +23,7 @@ use App\Http\Controllers\Proctor\ScannerController as ProctorScannerController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\PermitController as StudentPermitController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,7 +31,7 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    $user = auth()->user();
+    $user = Auth::user();
 
     return redirect(match ($user->role) {
         'student' => route('student.dashboard'),
@@ -45,6 +46,7 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/theme', [ProfileController::class, 'updateTheme'])->name('profile.theme.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::middleware('role:student')->prefix('student')->name('student.')->group(function () {
@@ -56,6 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:proctor')->prefix('proctor')->name('proctor.')->group(function () {
         Route::get('/dashboard', ProctorDashboardController::class)->name('dashboard');
         Route::get('/scanner', [ProctorScannerController::class, 'show'])->name('scanner.show');
+        Route::post('/scanner/preview', [ProctorScannerController::class, 'preview'])->name('scanner.preview');
         Route::post('/scanner/scan', [ProctorScannerController::class, 'scan'])->name('scanner.scan');
         Route::get('/schedules', [ProctorScheduleController::class, 'index'])->name('schedules.index');
         Route::get('/schedules/slots/{slot}/attendance', [ProctorScheduleController::class, 'attendance'])->name('schedules.attendance');
@@ -79,7 +82,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/academic-head/schedules/{schedule}/fetch-matrix', [AcademicHeadScheduleController::class, 'fetchMatrix'])->name('academic-head.schedules.fetch-matrix');
         Route::post('/academic-head/schedules/generate', [AcademicHeadScheduleController::class, 'generate'])->name('academic-head.schedules.generate');
         Route::get('/academic-head/schedules/{schedule}/edit', [AcademicHeadScheduleController::class, 'edit'])->name('academic-head.schedules.edit');
-        Route::patch('/academic-head/schedules/slots/{slot}', [AcademicHeadScheduleController::class, 'updateSlot'])->name('academic-head.schedules.slots.update');
         Route::post('/academic-head/schedules/{schedule}/save-draft', [AcademicHeadScheduleController::class, 'saveDraft'])->name('academic-head.schedules.save-draft');
         Route::post('/academic-head/schedules/{schedule}/upload', [AcademicHeadScheduleController::class, 'upload'])->name('academic-head.schedules.upload');
         Route::post('/academic-head/schedules/{schedule}/reset', [AcademicHeadScheduleController::class, 'reset'])->name('academic-head.schedules.reset');

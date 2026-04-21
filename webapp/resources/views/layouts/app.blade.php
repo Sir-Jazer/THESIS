@@ -1,5 +1,9 @@
+@php
+    $initialTheme = auth()->user()?->resolved_theme ?? 'light';
+@endphp
+
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="{{ $initialTheme === 'dark' ? 'dark' : '' }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,7 +19,10 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="portal-body antialiased">
-        <div x-data="{ sidebarOpen: false, sidebarCollapsed: false, profileOpen: false }" class="portal-shell min-h-screen w-screen overflow-x-hidden">
+        <div
+            x-data="portalShell('{{ $initialTheme }}', '{{ route('profile.theme.update') }}')"
+            class="portal-shell min-h-screen w-screen overflow-x-hidden"
+        >
             @include('layouts.navigation')
 
             <div class="pt-16">
@@ -49,5 +56,6 @@
                 </div>
             </div>
         </div>
+        @stack('scripts')
     </body>
 </html>

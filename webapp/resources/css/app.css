@@ -22,6 +22,65 @@
         --portal-error-soft: #fef2f2;
         --portal-error-border: #fca5a5;
         --portal-error-text: #b91c1c;
+        --portal-nav-idle-text: #475569;
+        --portal-nav-hover-bg: #eff6ff;
+        --portal-nav-hover-text: #1d4ed8;
+        --portal-nav-icon-idle-bg: #f1f5f9;
+        --portal-nav-icon-idle-text: #64748b;
+        --portal-nav-icon-active-bg: #dbeafe;
+        --portal-nav-icon-active-text: #1d4ed8;
+        --portal-menu-bg: #ffffff;
+        --portal-menu-border: #e2e8f0;
+        --portal-menu-text: #475569;
+        --portal-menu-muted: #64748b;
+        --portal-menu-hover-bg: #eff6ff;
+        --portal-menu-hover-text: #1d4ed8;
+        --portal-menu-danger-hover-bg: #fee2e2;
+        --portal-menu-danger-hover-text: #b91c1c;
+        --portal-theme-pill-bg: #e2e8f0;
+        --portal-theme-pill-text: #334155;
+        --portal-theme-pill-on-bg: #0ea5e9;
+        --portal-theme-pill-on-text: #ecfeff;
+    }
+
+    .dark {
+        --portal-bg: #0b1020;
+        --portal-header-bg: #0d1326;
+        --portal-header-border: #1e2a45;
+        --portal-sidebar-bg: #111a2f;
+        --portal-surface: #151f38;
+        --portal-surface-muted: #1a2744;
+        --portal-surface-accent: #1e2d4d;
+        --portal-text: #d7e2ff;
+        --portal-muted: #9ab0d3;
+        --portal-border: #27395d;
+        --portal-primary: #2f9bf5;
+        --portal-primary-soft: #1b2f4d;
+        --portal-success-soft: #122a24;
+        --portal-success-border: #2f8f6f;
+        --portal-success-text: #9ef4d0;
+        --portal-error-soft: #311a21;
+        --portal-error-border: #95485d;
+        --portal-error-text: #ffbac8;
+        --portal-nav-idle-text: #c2d2ee;
+        --portal-nav-hover-bg: #1c2d4f;
+        --portal-nav-hover-text: #ecf4ff;
+        --portal-nav-icon-idle-bg: #1c2a49;
+        --portal-nav-icon-idle-text: #a9c2ea;
+        --portal-nav-icon-active-bg: #244376;
+        --portal-nav-icon-active-text: #d9ecff;
+        --portal-menu-bg: #17233f;
+        --portal-menu-border: #2b3f66;
+        --portal-menu-text: #d2e0f7;
+        --portal-menu-muted: #9bb1d2;
+        --portal-menu-hover-bg: #21345b;
+        --portal-menu-hover-text: #eef5ff;
+        --portal-menu-danger-hover-bg: #3a1f2a;
+        --portal-menu-danger-hover-text: #ffd3dc;
+        --portal-theme-pill-bg: #31486f;
+        --portal-theme-pill-text: #d5e4fb;
+        --portal-theme-pill-on-bg: #2f9bf5;
+        --portal-theme-pill-on-text: #eef8ff;
     }
 
     [x-cloak] {
@@ -34,6 +93,10 @@
         color: var(--portal-text);
         font-family: "Segoe UI", "Trebuchet MS", "Tahoma", sans-serif;
         overflow-x: hidden;
+    }
+
+    .dark body.portal-body {
+        background: radial-gradient(circle at 20% -10%, #1a2b4f 0%, #0b1020 38%, #090f1b 100%);
     }
 }
 
@@ -52,6 +115,17 @@
 
     .portal-sidebar {
         background: var(--portal-sidebar-bg);
+        border-right: 1px solid var(--portal-border);
+    }
+
+    .portal-sidebar-divider-top {
+        border-color: var(--portal-border);
+        border-top-width: 1px;
+    }
+
+    .portal-sidebar-divider-bottom {
+        border-color: var(--portal-border);
+        border-bottom-width: 1px;
     }
 
     .portal-content {
@@ -60,7 +134,7 @@
 
     .portal-page-header {
         border-bottom: 1px solid var(--portal-border);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.74));
+        background: color-mix(in srgb, var(--portal-surface) 92%, transparent);
         backdrop-filter: blur(6px);
     }
 
@@ -69,7 +143,8 @@
     }
 
     .portal-sidebar-role {
-        @apply mt-1 text-[22px] font-semibold text-slate-600;
+        @apply mt-1 text-[22px] font-semibold;
+        color: var(--portal-text);
 
     }
 
@@ -78,7 +153,12 @@
     }
 
     .portal-nav-item-idle {
-        @apply text-slate-600 hover:bg-blue-50 hover:text-blue-700;
+        color: var(--portal-nav-idle-text);
+    }
+
+    .portal-nav-item-idle:hover {
+        background: var(--portal-nav-hover-bg);
+        color: var(--portal-nav-hover-text);
     }
 
     .portal-nav-item-active {
@@ -92,15 +172,67 @@
     }
 
     .portal-nav-item-idle .portal-nav-icon {
-        @apply bg-slate-100 text-slate-500;
+        background: var(--portal-nav-icon-idle-bg);
+        color: var(--portal-nav-icon-idle-text);
     }
 
     .portal-nav-item-active .portal-nav-icon {
-        @apply bg-blue-100 text-blue-700;
+        background: var(--portal-nav-icon-active-bg);
+        color: var(--portal-nav-icon-active-text);
     }
 
     .portal-nav-label {
         @apply whitespace-nowrap;
+    }
+
+    .portal-profile-menu {
+        background: var(--portal-menu-bg);
+        border: 1px solid var(--portal-menu-border);
+        box-shadow: 0 18px 40px -24px rgba(2, 12, 35, 0.75);
+    }
+
+    .portal-profile-menu-head {
+        border-bottom: 1px solid var(--portal-menu-border);
+        color: var(--portal-menu-text);
+    }
+
+    .portal-profile-menu-head p:last-child {
+        color: var(--portal-menu-muted);
+    }
+
+    .portal-profile-menu-item {
+        color: var(--portal-menu-text);
+        transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
+    }
+
+    .portal-profile-menu-item:hover {
+        background: var(--portal-menu-hover-bg);
+        color: var(--portal-menu-hover-text);
+    }
+
+    .portal-profile-menu-item-danger:hover {
+        background: var(--portal-menu-danger-hover-bg);
+        color: var(--portal-menu-danger-hover-text);
+    }
+
+    .portal-theme-pill {
+        border-radius: 9999px;
+        padding: 0.15rem 0.6rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        background: var(--portal-theme-pill-bg);
+        color: var(--portal-theme-pill-text);
+    }
+
+    .portal-theme-pill-on {
+        background: var(--portal-theme-pill-on-bg);
+        color: var(--portal-theme-pill-on-text);
+    }
+
+    .portal-theme-pill-off {
+        background: var(--portal-theme-pill-bg);
+        color: var(--portal-theme-pill-text);
     }
 
     .btn-primary {
@@ -183,7 +315,7 @@
 
     /* Portal Content Light Theme Overrides */
     .portal-content {
-        @apply text-slate-800;
+        color: var(--portal-text);
     }
 
     .portal-content .bg-slate-800 {
@@ -305,5 +437,69 @@
 
     .portal-content .text-red-100 {
         color: var(--portal-error-text);
+    }
+
+    .dark .portal-content .bg-white,
+    .dark .portal-content .bg-slate-50,
+    .dark .portal-content .bg-slate-100,
+    .dark .portal-content .bg-slate-800,
+    .dark .portal-content .bg-slate-700 {
+        background-color: var(--portal-surface);
+        color: var(--portal-text);
+    }
+
+    .dark .portal-content .text-slate-900,
+    .dark .portal-content .text-slate-800,
+    .dark .portal-content .text-slate-700,
+    .dark .portal-content .text-gray-900,
+    .dark .portal-content .text-gray-800,
+    .dark .portal-content .text-gray-700,
+    .dark .portal-content .text-gray-600 {
+        color: var(--portal-text);
+    }
+
+    .dark .portal-content .text-slate-500,
+    .dark .portal-content .text-slate-400,
+    .dark .portal-content .text-gray-500,
+    .dark .portal-content .text-gray-400 {
+        color: var(--portal-muted);
+    }
+
+    .dark .portal-content .border-slate-100,
+    .dark .portal-content .border-slate-200,
+    .dark .portal-content .border-slate-300,
+    .dark .portal-content .border-gray-200,
+    .dark .portal-content .border-gray-300 {
+        border-color: var(--portal-border);
+    }
+
+    .dark .portal-content table thead {
+        color: var(--portal-text);
+        background-color: var(--portal-surface-accent);
+    }
+
+    .dark .portal-content table tbody td {
+        color: var(--portal-text);
+    }
+
+    .dark .portal-content table tbody tr:hover {
+        background-color: var(--portal-surface-muted);
+    }
+
+    .dark .portal-content input[type="text"],
+    .dark .portal-content input[type="email"],
+    .dark .portal-content input[type="password"],
+    .dark .portal-content input[type="number"],
+    .dark .portal-content input[type="date"],
+    .dark .portal-content input[type="time"],
+    .dark .portal-content input[type="datetime-local"],
+    .dark .portal-content input[type="search"],
+    .dark .portal-content input[type="url"],
+    .dark .portal-content input[type="tel"],
+    .dark .portal-content select,
+    .dark .portal-content textarea {
+        background-color: var(--portal-surface-accent);
+        border-color: var(--portal-border);
+        color: var(--portal-text);
     }
 }

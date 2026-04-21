@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
@@ -31,6 +32,22 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    }
+
+    public function updateTheme(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'theme_preference' => ['required', 'in:light,dark'],
+        ]);
+
+        $user = $request->user();
+        $user->theme_preference = $validated['theme_preference'];
+        $user->save();
+
+        return response()->json([
+            'ok' => true,
+            'theme' => $user->resolved_theme,
+        ]);
     }
 
     /**

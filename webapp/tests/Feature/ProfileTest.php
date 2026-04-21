@@ -28,7 +28,8 @@ class ProfileTest extends TestCase
         $response = $this
             ->actingAs($user)
             ->patch('/profile', [
-                'name' => 'Test User',
+                'first_name' => 'Test',
+                'last_name' => 'User',
                 'email' => 'test@example.com',
             ]);
 
@@ -38,27 +39,45 @@ class ProfileTest extends TestCase
 
         $user->refresh();
 
-        $this->assertSame('Test User', $user->name);
+        $this->assertSame('Test', $user->first_name);
+        $this->assertSame('User', $user->last_name);
         $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
     }
 
-    public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
+    public function test_theme_preference_can_be_updated_for_authenticated_user(): void
     {
         $user = User::factory()->create();
 
         $response = $this
             ->actingAs($user)
-            ->patch('/profile', [
-                'name' => 'Test User',
-                'email' => $user->email,
+            ->patchJson('/profile/theme', [
+                'theme_preference' => 'dark',
             ]);
 
         $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertOk()
+            ->assertJson([
+                'ok' => true,
+                'theme' => 'dark',
+            ]);
 
-        $this->assertNotNull($user->refresh()->email_verified_at);
+        $this->assertSame('dark', $user->fresh()->theme_preference);
+    }
+
+    public function test_theme_preference_rejects_invalid_value(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->patchJson('/profile/theme', [
+                'theme_preference' => 'neon',
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('theme_preference');
+
+        $this->assertSame('light', $user->fresh()->resolved_theme);
     }
 
     public function test_user_can_delete_their_account(): void

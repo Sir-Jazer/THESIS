@@ -19,7 +19,56 @@ class ExamAttendanceService
      * Returns ['ok' => true, 'student_name' => string] on success.
      * Returns ['ok' => false, 'message' => string] on any validation failure.
      */
+    public function previewAttendance(SectionExamScheduleSlot $slot, string $qrToken): array
+    {
+        $context = $this->resolveAttendanceContext($slot, $qrToken);
+
+        if (! ($context['ok'] ?? false)) {
+            return $context;
+        }
+
+        return [
+            'ok' => true,
+            'student_name' => $context['student_name'],
+            'student_id' => $context['student_id'],
+            'section_code' => $context['section_code'],
+            'subject_code' => $context['subject_code'],
+            'subject_name' => $context['subject_name'],
+            'permit_message' => 'Permit is valid for the current exam period.',
+        ];
+    }
+
     public function logAttendance(SectionExamScheduleSlot $slot, string $qrToken, User $proctor): array
+    {
+        $context = $this->resolveAttendanceContext($slot, $qrToken);
+
+        if (! ($context['ok'] ?? false)) {
+            return $context;
+        }
+
+        /** @var \App\Models\ExamPermit $permit */
+        $permit = $context['permit'];
+
+        /** @var \App\Models\StudentProfile $studentProfile */
+        $studentProfile = $context['student_profile'];
+
+        // Log attendance
+        ExamAttendance::create([
+            'section_exam_schedule_slot_id' => $slot->id,
+            'student_profile_id' => $studentProfile->id,
+            'exam_permit_id' => $permit->id,
+            'logged_by' => $proctor->id,
+            'logged_at' => now(),
+        ]);
+
+        return [
+            'ok' => true,
+            'student_name' => $context['student_name'],
+            'student_id' => $context['student_id'],
+        ];
+    }
+
+    private function resolveAttendanceContext(SectionExamScheduleSlot $slot, string $qrToken): array
     {
         // 1. Active academic setting
         $setting = $this->portalService->currentSetting();
@@ -86,21 +135,18 @@ class ExamAttendanceService
             return ['ok' => false, 'message' => 'Attendance already recorded for this student in this slot.'];
         }
 
-        // Log attendance
-        ExamAttendance::create([
-            'section_exam_schedule_slot_id' => $slot->id,
-            'student_profile_id' => $studentProfile->id,
-            'exam_permit_id' => $permit->id,
-            'logged_by' => $proctor->id,
-            'logged_at' => now(),
-        ]);
-
         $studentUser = $studentProfile->user;
+        $studentName = trim(($studentUser?->first_name ?? '') . ' ' . ($studentUser?->last_name ?? ''));
 
         return [
             'ok' => true,
-            'student_name' => trim(($studentUser?->first_name ?? '') . ' ' . ($studentUser?->last_name ?? '')),
+            'permit' => $permit,
+            'student_profile' => $studentProfile,
+            'student_name' => $studentName,
             'student_id' => $studentProfile->student_id,
+            'section_code' => $slot->schedule?->section?->section_code,
+            'subject_code' => $slot->subject?->code,
+            'subject_name' => $slot->subject?->name,
         ];
     }
 }
