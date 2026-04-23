@@ -5,6 +5,7 @@ namespace App\Services\Portal;
 use App\Models\ExamAttendance;
 use App\Models\ExamPermit;
 use App\Models\SectionExamScheduleSlot;
+use App\Models\SubjectExamReference;
 use App\Models\User;
 
 class ExamAttendanceService
@@ -34,6 +35,7 @@ class ExamAttendanceService
             'section_code' => $context['section_code'],
             'subject_code' => $context['subject_code'],
             'subject_name' => $context['subject_name'],
+            'exam_references' => $context['exam_references'],
             'permit_message' => 'Permit is valid for the current exam period.',
         ];
     }
@@ -138,6 +140,18 @@ class ExamAttendanceService
         $studentUser = $studentProfile->user;
         $studentName = trim(($studentUser?->first_name ?? '') . ' ' . ($studentUser?->last_name ?? ''));
 
+        // Fetch exam reference numbers for the slot's subject under the current setting
+        $examReferences = [];
+        if ($slot->subject_id) {
+            $examReferences = SubjectExamReference::query()
+                ->where('subject_id', $slot->subject_id)
+                ->where('academic_year', $setting->academic_year)
+                ->where('semester', $semester)
+                ->where('exam_period', $setting->exam_period)
+                ->pluck('exam_reference_number')
+                ->toArray();
+        }
+
         return [
             'ok' => true,
             'permit' => $permit,
@@ -147,6 +161,7 @@ class ExamAttendanceService
             'section_code' => $slot->schedule?->section?->section_code,
             'subject_code' => $slot->subject?->code,
             'subject_name' => $slot->subject?->name,
+            'exam_references' => $examReferences,
         ];
     }
 }

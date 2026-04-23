@@ -87,6 +87,10 @@
                                 <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Exam Slot</p>
                                 <p id="confirm-slot-label" class="font-semibold text-slate-900">-</p>
                             </div>
+                            <div>
+                                <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Exam Reference Numbers</p>
+                                <p id="confirm-exam-refs" class="font-semibold text-slate-900">-</p>
+                            </div>
                             <div class="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2">
                                 <p id="confirm-permit-message" class="font-medium text-emerald-700">Permit is valid for the current exam period.</p>
                             </div>
@@ -130,6 +134,7 @@
         const confirmSection = document.getElementById('confirm-section');
         const confirmSubject = document.getElementById('confirm-subject');
         const confirmSlotLabel = document.getElementById('confirm-slot-label');
+        const confirmExamRefs = document.getElementById('confirm-exam-refs');
         const confirmPermitMessage = document.getElementById('confirm-permit-message');
         const confirmReturnBtn = document.getElementById('confirm-return-btn');
         const confirmLogBtn = document.getElementById('confirm-log-btn');
@@ -325,6 +330,10 @@
             }
 
             confirmSlotLabel.textContent = selectedSlot?.textContent || '-';
+
+            const refs = Array.isArray(data.exam_references) ? data.exam_references : [];
+            confirmExamRefs.textContent = refs.length > 0 ? refs.join(', ') : 'None set';
+
             confirmPermitMessage.textContent = data.permit_message || 'Permit is valid for the current exam period.';
             confirmModal.classList.remove('hidden');
         }
