@@ -7,6 +7,7 @@ COPY public/ public/
 COPY resources/ resources/
 COPY vite.config.js tailwind.config.js postcss.config.js ./
 ENV APP_URL=https://e-permit-system.onrender.com
+RUN rm -rf public/build
 RUN npm run build
 
 # Stage 2: PHP + Apache
