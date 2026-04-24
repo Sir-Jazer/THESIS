@@ -34,9 +34,6 @@ COPY . .
 # Copy built assets from node stage
 COPY --from=nodebuild /app/public/build public/build
 
-# Copy public (except build) for static assets
-COPY public/ public/
-
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
