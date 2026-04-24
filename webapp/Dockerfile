@@ -6,6 +6,7 @@ RUN npm ci
 COPY public/ public/
 COPY resources/ resources/
 COPY vite.config.js tailwind.config.js postcss.config.js ./
+# Set APP_URL for Vite build
 ENV APP_URL=https://e-permit-system.onrender.com
 RUN rm -rf public/build
 RUN npm run build
