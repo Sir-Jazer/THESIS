@@ -3,6 +3,7 @@ FROM node:20-alpine as nodebuild
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
+COPY public/ public/
 COPY resources/ resources/
 COPY vite.config.js tailwind.config.js postcss.config.js ./
 RUN npm run build
@@ -18,7 +19,11 @@ RUN apt-get update && apt-get install -y \
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Set working directory
+# Set Apache to serve from public/
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
 WORKDIR /var/www/html
 
 # Copy app files
@@ -26,6 +31,9 @@ COPY . .
 
 # Copy built assets from node stage
 COPY --from=nodebuild /app/public/build public/build
+
+# Copy public (except build) for static assets
+COPY public/ public/
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -43,7 +51,3 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 10000
 
 CMD ["/entrypoint.sh"]
-
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
