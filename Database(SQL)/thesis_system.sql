@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 21, 2026 at 07:25 AM
+-- Generation Time: Apr 27, 2026 at 05:51 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -147,13 +147,6 @@ CREATE TABLE `exam_matrices` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `exam_matrices`
---
-
-INSERT INTO `exam_matrices` (`id`, `academic_year`, `semester`, `exam_period`, `program_id`, `name`, `status`, `uploaded_at`, `uploaded_by`, `created_by`, `created_at`, `updated_at`) VALUES
-(3, '2025-2026', 1, 'Prelim', NULL, NULL, 'uploaded', '2026-04-20 09:40:16', 2, 2, '2026-04-10 11:26:31', '2026-04-20 09:40:16');
-
 -- --------------------------------------------------------
 
 --
@@ -172,40 +165,6 @@ CREATE TABLE `exam_matrix_slots` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `exam_matrix_slots`
---
-
-INSERT INTO `exam_matrix_slots` (`id`, `exam_matrix_id`, `slot_date`, `start_time`, `end_time`, `is_fixed`, `sort_order`, `created_at`, `updated_at`) VALUES
-(281, 3, '2026-04-01', '07:00:00', '08:30:00', 0, 0, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(282, 3, '2026-04-01', '08:30:00', '10:00:00', 0, 1, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(283, 3, '2026-04-01', '10:00:00', '11:30:00', 0, 2, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(284, 3, '2026-04-01', '11:30:00', '13:00:00', 0, 3, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(285, 3, '2026-04-01', '13:00:00', '14:30:00', 0, 4, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(286, 3, '2026-04-01', '14:30:00', '16:00:00', 0, 5, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(287, 3, '2026-04-01', '16:00:00', '17:30:00', 0, 6, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(288, 3, '2026-04-02', '07:00:00', '08:30:00', 0, 7, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(289, 3, '2026-04-02', '08:30:00', '10:00:00', 0, 8, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(290, 3, '2026-04-02', '10:00:00', '11:30:00', 0, 9, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(291, 3, '2026-04-02', '11:30:00', '13:00:00', 0, 10, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(292, 3, '2026-04-02', '13:00:00', '14:30:00', 0, 11, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(293, 3, '2026-04-02', '14:30:00', '16:00:00', 0, 12, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(294, 3, '2026-04-02', '16:00:00', '17:30:00', 0, 13, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(295, 3, '2026-04-03', '07:00:00', '08:30:00', 0, 14, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(296, 3, '2026-04-03', '08:30:00', '10:00:00', 0, 15, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(297, 3, '2026-04-03', '10:00:00', '11:30:00', 0, 16, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(298, 3, '2026-04-03', '11:30:00', '13:00:00', 0, 17, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(299, 3, '2026-04-03', '13:00:00', '14:30:00', 0, 18, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(300, 3, '2026-04-03', '14:30:00', '16:00:00', 0, 19, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(301, 3, '2026-04-03', '16:00:00', '17:30:00', 0, 20, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(302, 3, '2026-04-04', '07:00:00', '08:30:00', 1, 21, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(303, 3, '2026-04-04', '08:30:00', '10:00:00', 1, 22, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(304, 3, '2026-04-04', '10:00:00', '11:30:00', 0, 23, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(305, 3, '2026-04-04', '11:30:00', '13:00:00', 0, 24, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(306, 3, '2026-04-04', '13:00:00', '14:30:00', 0, 25, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(307, 3, '2026-04-04', '14:30:00', '16:00:00', 0, 26, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(308, 3, '2026-04-04', '16:00:00', '17:30:00', 0, 27, '2026-04-10 20:22:24', '2026-04-10 20:22:24');
-
 -- --------------------------------------------------------
 
 --
@@ -220,14 +179,6 @@ CREATE TABLE `exam_matrix_slot_subjects` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `exam_matrix_slot_subjects`
---
-
-INSERT INTO `exam_matrix_slot_subjects` (`id`, `exam_matrix_slot_id`, `subject_id`, `sort_order`, `created_at`, `updated_at`) VALUES
-(14, 302, 4, 0, '2026-04-10 20:22:24', '2026-04-10 20:22:24'),
-(15, 303, 5, 0, '2026-04-10 20:22:24', '2026-04-10 20:22:24');
 
 -- --------------------------------------------------------
 
@@ -255,8 +206,8 @@ CREATE TABLE `exam_permits` (
 --
 
 INSERT INTO `exam_permits` (`id`, `student_profile_id`, `academic_year`, `semester`, `exam_period`, `qr_token`, `generated_by`, `generated_at`, `revoked_at`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 1, '2025-2026', 1, 'Prelim', '4509e284-d5b4-42cc-8d4d-4226d34a4ad6', 4, '2026-04-20 08:44:16', NULL, 1, '2026-04-20 08:44:16', '2026-04-20 08:44:16'),
-(2, 2, '2025-2026', 1, 'Prelim', '57ba1b38-f2b3-43af-b93f-d46672bc66a4', 4, '2026-04-20 09:42:37', NULL, 1, '2026-04-20 09:42:37', '2026-04-20 09:42:37');
+(1, 1, '2025-2026', 1, 'Prelim', '621ebd2e-dd36-4077-8944-8fbd6c8b6e61', 4, '2026-04-24 09:19:07', '2026-04-24 09:24:00', 0, '2026-04-20 08:44:16', '2026-04-24 09:24:00'),
+(2, 2, '2025-2026', 1, 'Prelim', 'a2582d74-beb6-4690-8d51-7b3994626257', 4, '2026-04-21 08:36:06', '2026-04-21 09:05:49', 0, '2026-04-20 09:42:37', '2026-04-21 09:05:49');
 
 -- --------------------------------------------------------
 
@@ -559,14 +510,6 @@ CREATE TABLE `section_exam_schedules` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `section_exam_schedules`
---
-
-INSERT INTO `section_exam_schedules` (`id`, `exam_matrix_id`, `section_id`, `academic_year`, `semester`, `exam_period`, `program_id`, `status`, `published_at`, `published_by`, `created_by`, `created_at`, `updated_at`) VALUES
-(13, 3, 1, '2025-2026', 1, 'Prelim', 1, 'draft', NULL, NULL, 2, '2026-04-10 20:21:36', '2026-04-10 20:21:36'),
-(16, 3, 2, '2025-2026', 1, 'Prelim', 1, 'published', '2026-04-20 09:41:39', 2, 2, '2026-04-20 09:36:45', '2026-04-20 09:41:39');
-
 -- --------------------------------------------------------
 
 --
@@ -588,68 +531,6 @@ CREATE TABLE `section_exam_schedule_slots` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `section_exam_schedule_slots`
---
-
-INSERT INTO `section_exam_schedule_slots` (`id`, `section_exam_schedule_id`, `exam_matrix_slot_id`, `slot_date`, `start_time`, `end_time`, `is_fixed`, `subject_id`, `room_id`, `is_manual_assignment`, `created_at`, `updated_at`) VALUES
-(309, 13, 281, '2026-04-01', '07:00:00', '08:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(310, 13, 282, '2026-04-01', '08:30:00', '10:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(311, 13, 283, '2026-04-01', '10:00:00', '11:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(312, 13, 284, '2026-04-01', '11:30:00', '13:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(313, 13, 285, '2026-04-01', '13:00:00', '14:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(314, 13, 286, '2026-04-01', '14:30:00', '16:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(315, 13, 287, '2026-04-01', '16:00:00', '17:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(316, 13, 288, '2026-04-02', '07:00:00', '08:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(317, 13, 289, '2026-04-02', '08:30:00', '10:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(318, 13, 290, '2026-04-02', '10:00:00', '11:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(319, 13, 291, '2026-04-02', '11:30:00', '13:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(320, 13, 292, '2026-04-02', '13:00:00', '14:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(321, 13, 293, '2026-04-02', '14:30:00', '16:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(322, 13, 294, '2026-04-02', '16:00:00', '17:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(323, 13, 295, '2026-04-03', '07:00:00', '08:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(324, 13, 296, '2026-04-03', '08:30:00', '10:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(325, 13, 297, '2026-04-03', '10:00:00', '11:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(326, 13, 298, '2026-04-03', '11:30:00', '13:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(327, 13, 299, '2026-04-03', '13:00:00', '14:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(328, 13, 300, '2026-04-03', '14:30:00', '16:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(329, 13, 301, '2026-04-03', '16:00:00', '17:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(330, 13, 302, '2026-04-04', '07:00:00', '08:30:00', 1, 42, 1, 1, '2026-04-10 20:21:36', '2026-04-20 09:40:58'),
-(331, 13, 303, '2026-04-04', '08:30:00', '10:00:00', 1, 5, 4, 1, '2026-04-10 20:21:36', '2026-04-20 09:39:48'),
-(332, 13, 304, '2026-04-04', '10:00:00', '11:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(333, 13, 305, '2026-04-04', '11:30:00', '13:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(334, 13, 306, '2026-04-04', '13:00:00', '14:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(335, 13, 307, '2026-04-04', '14:30:00', '16:00:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(336, 13, 308, '2026-04-04', '16:00:00', '17:30:00', 0, NULL, NULL, 1, '2026-04-10 20:21:36', '2026-04-10 20:23:44'),
-(393, 16, 281, '2026-04-01', '07:00:00', '08:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(394, 16, 282, '2026-04-01', '08:30:00', '10:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(395, 16, 283, '2026-04-01', '10:00:00', '11:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(396, 16, 284, '2026-04-01', '11:30:00', '13:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(397, 16, 285, '2026-04-01', '13:00:00', '14:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(398, 16, 286, '2026-04-01', '14:30:00', '16:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(399, 16, 287, '2026-04-01', '16:00:00', '17:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(400, 16, 288, '2026-04-02', '07:00:00', '08:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(401, 16, 289, '2026-04-02', '08:30:00', '10:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(402, 16, 290, '2026-04-02', '10:00:00', '11:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(403, 16, 291, '2026-04-02', '11:30:00', '13:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(404, 16, 292, '2026-04-02', '13:00:00', '14:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(405, 16, 293, '2026-04-02', '14:30:00', '16:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(406, 16, 294, '2026-04-02', '16:00:00', '17:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(407, 16, 295, '2026-04-03', '07:00:00', '08:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(408, 16, 296, '2026-04-03', '08:30:00', '10:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(409, 16, 297, '2026-04-03', '10:00:00', '11:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(410, 16, 298, '2026-04-03', '11:30:00', '13:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(411, 16, 299, '2026-04-03', '13:00:00', '14:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(412, 16, 300, '2026-04-03', '14:30:00', '16:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(413, 16, 301, '2026-04-03', '16:00:00', '17:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(414, 16, 302, '2026-04-04', '07:00:00', '08:30:00', 1, 4, 4, 1, '2026-04-20 09:36:45', '2026-04-20 09:38:38'),
-(415, 16, 303, '2026-04-04', '08:30:00', '10:00:00', 1, 6, 1, 1, '2026-04-20 09:36:45', '2026-04-20 09:41:24'),
-(416, 16, 304, '2026-04-04', '10:00:00', '11:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(417, 16, 305, '2026-04-04', '11:30:00', '13:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(418, 16, 306, '2026-04-04', '13:00:00', '14:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(419, 16, 307, '2026-04-04', '14:30:00', '16:00:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14'),
-(420, 16, 308, '2026-04-04', '16:00:00', '17:30:00', 0, NULL, NULL, 1, '2026-04-20 09:36:45', '2026-04-20 09:37:14');
-
 -- --------------------------------------------------------
 
 --
@@ -662,16 +543,6 @@ CREATE TABLE `section_exam_schedule_slot_proctors` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `section_exam_schedule_slot_proctors`
---
-
-INSERT INTO `section_exam_schedule_slot_proctors` (`section_exam_schedule_slot_id`, `proctor_id`, `created_at`, `updated_at`) VALUES
-(330, 6, '2026-04-20 09:40:58', '2026-04-20 09:40:58'),
-(331, 3, '2026-04-20 09:39:48', '2026-04-20 09:39:48'),
-(414, 3, '2026-04-20 09:37:11', '2026-04-20 09:37:11'),
-(415, 6, '2026-04-20 09:41:24', '2026-04-20 09:41:24');
 
 -- --------------------------------------------------------
 
@@ -693,7 +564,12 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('coHp3vOuf3LyGWYRTnMjcabsPwbTksPIqMwFxxXO', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiWVJtTXlUZ2JORDFlcUlsY2pNRnVnNkJEcFV0QUdkV1VsSWZ1Sk1hViI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMCI7czo1OiJyb3V0ZSI7Tjt9fQ==', 1776707041);
+('7ljMiAfamzNiphP1Aflw4OL7kRrK2Jh1UwIx3xOt', 4, '192.168.8.35', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiQkh3YTJjZDBET3dXMXdFMENJZ2t5alRoSGY1VmE5bjMyaE8zU0pIdSI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NDk6Imh0dHA6Ly8xOTIuMTY4LjguMzU6ODAwMC9jYXNoaWVyL3N0dWRlbnQtcGF5bWVudHMiO3M6NToicm91dGUiO3M6MzA6ImNhc2hpZXIuc3R1ZGVudC1wYXltZW50cy5pbmRleCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTA6ImxvZ2luX3dlYl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjQ7fQ==', 1777051492),
+('7p4IUwOFnErHwoSy2OI7OllKdPnPN2aMtSbYrNIM', 5, '192.168.8.35', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiTEU2QmxhQ255Q2pqcnZKanl0Ulh2WlhtbWxIN0xJWDNTTHlzdnBSRSI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NDE6Imh0dHA6Ly8xOTIuMTY4LjguMzU6ODAwMC9zdHVkZW50L3N1YmplY3RzIjtzOjU6InJvdXRlIjtzOjIyOiJzdHVkZW50LnN1YmplY3RzLmluZGV4Ijt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6NTt9', 1777051496),
+('DsgDm0R6uCMbmBUBn9Q4AVe09aNf6uJFyHm2FnCa', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiWGpJdURPZkJlYnR0d3NzR3FEdlBwbFJPZ1NvczZoQzZ6eG1hcjk3RCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMCI7czo1OiJyb3V0ZSI7Tjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1777049921),
+('HDFELvcKIytFrJLuinfoNrx93eVDh06eMQHAHCQ4', 3, '192.168.8.35', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiVFpsOWJGdUM0cHFSeFNqVWp6TE9GZWp0bXZNZDRXbkZjMllmd3VERSI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NDI6Imh0dHA6Ly8xOTIuMTY4LjguMzU6ODAwMC9wcm9jdG9yL3NjaGVkdWxlcyI7czo1OiJyb3V0ZSI7czoyMzoicHJvY3Rvci5zY2hlZHVsZXMuaW5kZXgiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX1zOjUwOiJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7aTozO30=', 1777051448),
+('v4QBMRZKfKX9CuHFDKdGdFjAz1TsrFLnRxDAHpK9', 2, '192.168.8.35', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiWDJNc2dxeXBLTEU3MGptQk4wQ2ZNbE5TTVQwVXRPUnE4ZjB1UUxlOCI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NTg6Imh0dHA6Ly8xOTIuMTY4LjguMzU6ODAwMC9hY2FkZW1pYy1oZWFkL2dlbmVyYWwtZXhhbS1tYXRyaXgiO3M6NToicm91dGUiO3M6Mzk6ImFjYWRlbWljLWhlYWQuZ2VuZXJhbC1leGFtLW1hdHJpeC5pbmRleCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTA6ImxvZ2luX3dlYl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjI7fQ==', 1777051482),
+('vHXVKIQPOfxcyPxtewmxYFlgi7UEXqQVxhQYLLkk', 3, '192.168.8.34', 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/147.0.7727.99 Mobile/15E148 Safari/604.1', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiWDNBSlR2aGJTVFFLUDk1Q0g4SHVxaWxUVGhpUnl6TjVyeHJLc2pLbyI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NDA6Imh0dHA6Ly8xOTIuMTY4LjguMzU6ODAwMC9wcm9jdG9yL3NjYW5uZXIiO3M6NToicm91dGUiO3M6MjA6InByb2N0b3Iuc2Nhbm5lci5zaG93Ijt9czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6Mzt9', 1777051040);
 
 -- --------------------------------------------------------
 
@@ -829,6 +705,13 @@ CREATE TABLE `subject_exam_references` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `subject_exam_references`
+--
+
+INSERT INTO `subject_exam_references` (`id`, `subject_id`, `academic_year`, `semester`, `exam_period`, `exam_reference_number`, `created_at`, `updated_at`) VALUES
+(1, 39, '2025-2026', 1, 'Prelim', '10000013579', '2026-04-24 09:16:56', '2026-04-24 09:16:56');
 
 -- --------------------------------------------------------
 
@@ -1181,25 +1064,25 @@ ALTER TABLE `cashier_profiles`
 -- AUTO_INCREMENT for table `exam_attendances`
 --
 ALTER TABLE `exam_attendances`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `exam_matrices`
 --
 ALTER TABLE `exam_matrices`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `exam_matrix_slots`
 --
 ALTER TABLE `exam_matrix_slots`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=309;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=365;
 
 --
 -- AUTO_INCREMENT for table `exam_matrix_slot_subjects`
 --
 ALTER TABLE `exam_matrix_slot_subjects`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `exam_permits`
@@ -1253,13 +1136,13 @@ ALTER TABLE `sections`
 -- AUTO_INCREMENT for table `section_exam_schedules`
 --
 ALTER TABLE `section_exam_schedules`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `section_exam_schedule_slots`
 --
 ALTER TABLE `section_exam_schedule_slots`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=421;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=505;
 
 --
 -- AUTO_INCREMENT for table `student_profiles`
@@ -1277,7 +1160,7 @@ ALTER TABLE `subjects`
 -- AUTO_INCREMENT for table `subject_exam_references`
 --
 ALTER TABLE `subject_exam_references`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `users`
