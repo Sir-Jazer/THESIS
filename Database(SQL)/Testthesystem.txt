@@ -1,6 +1,24 @@
-Run Apache and MySQL on XAMPP then run this on a terminal:
+Jazer's PC
+LOCAL RUN
 cd C:\THESIS\webapp
 C:\xampp\php\php.exe .\artisan serve
 
 Run this in terminal if there are css assets updates:
 Push-Location c:\THESIS\webapp; & npm.cmd run build
+
+
+
+
+
+Cloude's Laptop
+LOCAL RUN
+Set-Location "c:\Jazer Thesis\THESIS\webapp"
+& "C:\xampp\php\php.exe" artisan serve
+
+NGROK RUN
+ngrok http 8000
+cd "C:\Jazer Thesis\THESIS\webapp"
+& "C:\xampp\php\php.exe" artisan serve --host=0.0.0.0 --port=8000
+
+Run this in powershell if there are css assets updates:
+Set-Location "c:\Jazer Thesis\THESIS\webapp"
