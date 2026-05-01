@@ -1441,4 +1441,275 @@ class GeneralExamMatrixLifecycleTest extends TestCase
             'exam_days' => $examDays,
         ], $overrides);
     }
+
+    // ── Merge conflict tests ───────────────────────────────────────────────────
+
+    /**
+     * Two sections share the same subject, same room, same time slot.
+     * Combined students (8 + 6 = 14) fit within room capacity (30).
+     * Expected: save succeeds when merge_confirmed = true.
+     */
+    public function test_merge_allowed_when_same_subject_and_capacity_fits(): void
+    {
+        $user = $this->createAcademicHead();
+        [$scheduleA, $scheduleB, $slotA, $slotB, $room, $subject] = $this->seedTwoSectionMergeScenario(
+            $user,
+            roomCapacity: 30,
+            studentsA: 8,
+            studentsB: 6,
+        );
+
+        // Assign section A slot first (no conflict yet).
+        $this->actingAs($user)
+            ->post(route('academic-head.schedules.save-draft', $scheduleA), [
+                'slots' => [$slotA->id => ['subject_id' => $subject->id, 'room_id' => $room->id]],
+                'merge_confirmed' => '0',
+            ])
+            ->assertRedirect();
+
+        // Now save section B into the same room — same subject — merge confirmed.
+        $this->actingAs($user)
+            ->post(route('academic-head.schedules.save-draft', $scheduleB), [
+                'slots' => [$slotB->id => ['subject_id' => $subject->id, 'room_id' => $room->id]],
+                'merge_confirmed' => '1',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('section_exam_schedule_slots', [
+            'id'      => $slotB->id,
+            'room_id' => $room->id,
+        ]);
+    }
+
+    /**
+     * Two sections, same subject, same room, same time slot.
+     * But combined students (20 + 15 = 35) exceed room capacity (30).
+     * Expected: save fails with room_id validation error even when merge_confirmed = true.
+     */
+    public function test_merge_rejected_when_aggregated_capacity_exceeded(): void
+    {
+        $user = $this->createAcademicHead();
+        [$scheduleA, $scheduleB, $slotA, $slotB, $room, $subject] = $this->seedTwoSectionMergeScenario(
+            $user,
+            roomCapacity: 30,
+            studentsA: 20,
+            studentsB: 15,
+        );
+
+        // Section A claims the room first.
+        $this->actingAs($user)
+            ->post(route('academic-head.schedules.save-draft', $scheduleA), [
+                'slots' => [$slotA->id => ['subject_id' => $subject->id, 'room_id' => $room->id]],
+                'merge_confirmed' => '0',
+            ])
+            ->assertRedirect();
+
+        // Section B tries to merge — aggregated 35 > 30 capacity.
+        $this->actingAs($user)
+            ->post(route('academic-head.schedules.save-draft', $scheduleB), [
+                'slots' => [$slotB->id => ['subject_id' => $subject->id, 'room_id' => $room->id]],
+                'merge_confirmed' => '1',
+            ])
+            ->assertSessionHasErrors('room_id');
+    }
+
+    /**
+     * Two sections, different subjects, same room, same time slot.
+     * Expected: save fails regardless of merge_confirmed because subjects differ.
+     */
+    public function test_merge_rejected_when_subjects_differ(): void
+    {
+        $user = $this->createAcademicHead();
+        [$programA, $programB] = $this->seedTwoPrograms();
+
+        $sectionA = Section::query()->create(['program_id' => $programA->id, 'year_level' => 1, 'section_code' => 'BSCS-1A']);
+        $sectionB = Section::query()->create(['program_id' => $programB->id, 'year_level' => 1, 'section_code' => 'BSIS-1A']);
+
+        $subjectA = Subject::query()->create(['code' => 'CS101', 'course_serial_number' => 'CSN-CS101', 'name' => 'CS Basics', 'units' => 3]);
+        $subjectB = Subject::query()->create(['code' => 'IS101', 'course_serial_number' => 'CSN-IS101', 'name' => 'IS Basics', 'units' => 3]);
+
+        DB::table('program_subjects')->insert([
+            ['program_id' => $programA->id, 'subject_id' => $subjectA->id, 'year_level' => 1, 'semester' => 1],
+            ['program_id' => $programB->id, 'subject_id' => $subjectB->id, 'year_level' => 1, 'semester' => 1],
+        ]);
+
+        $room = Room::query()->create(['name' => 'Room 101', 'capacity' => 40, 'is_available' => true]);
+
+        [$scheduleA, $slotA] = $this->seedDraftScheduleWithSlot($user, $programA, $sectionA);
+        [$scheduleB, $slotB] = $this->seedDraftScheduleWithSlot($user, $programB, $sectionB);
+
+        // Section A takes the room with subject A.
+        $this->actingAs($user)
+            ->post(route('academic-head.schedules.save-draft', $scheduleA), [
+                'slots' => [$slotA->id => ['subject_id' => $subjectA->id, 'room_id' => $room->id]],
+                'merge_confirmed' => '0',
+            ])
+            ->assertRedirect();
+
+        // Section B tries same room but different subject — must be rejected.
+        $this->actingAs($user)
+            ->post(route('academic-head.schedules.save-draft', $scheduleB), [
+                'slots' => [$slotB->id => ['subject_id' => $subjectB->id, 'room_id' => $room->id]],
+                'merge_confirmed' => '1',
+            ])
+            ->assertSessionHasErrors('room_id');
+    }
+
+    /**
+     * Proctor already assigned to another section at the same time slot.
+     * Without merge_confirmed the save is blocked.
+     */
+    public function test_proctor_conflict_blocked_without_merge_confirmation(): void
+    {
+        $user = $this->createAcademicHead();
+        $proctor = $this->createProctor();
+        [$scheduleA, $scheduleB, $slotA, $slotB, , $subject] = $this->seedTwoSectionMergeScenario($user, roomCapacity: 30, studentsA: 5, studentsB: 5);
+
+        $room = Room::query()->create(['name' => 'Room A', 'capacity' => 30, 'is_available' => true]);
+        $roomB = Room::query()->create(['name' => 'Room B', 'capacity' => 30, 'is_available' => true]);
+
+        // Assign proctor to section A.
+        $this->actingAs($user)
+            ->post(route('academic-head.schedules.save-draft', $scheduleA), [
+                'slots' => [$slotA->id => ['subject_id' => $subject->id, 'room_id' => $room->id, 'proctor_ids' => [$proctor->id]]],
+                'merge_confirmed' => '0',
+            ])
+            ->assertRedirect();
+
+        // Section B uses the same proctor, different room — no confirmation.
+        $this->actingAs($user)
+            ->post(route('academic-head.schedules.save-draft', $scheduleB), [
+                'slots' => [$slotB->id => ['subject_id' => $subject->id, 'room_id' => $roomB->id, 'proctor_ids' => [$proctor->id]]],
+                'merge_confirmed' => '0',
+            ])
+            ->assertSessionHasErrors('proctor_ids');
+    }
+
+    /**
+     * Same proctor conflict, but merge_confirmed = true → save succeeds.
+     */
+    public function test_proctor_conflict_allowed_with_merge_confirmation(): void
+    {
+        $user = $this->createAcademicHead();
+        $proctor = $this->createProctor();
+        [$scheduleA, $scheduleB, $slotA, $slotB, , $subject] = $this->seedTwoSectionMergeScenario($user, roomCapacity: 30, studentsA: 5, studentsB: 5);
+
+        $room = Room::query()->create(['name' => 'Room A', 'capacity' => 30, 'is_available' => true]);
+        $roomB = Room::query()->create(['name' => 'Room B', 'capacity' => 30, 'is_available' => true]);
+
+        $this->actingAs($user)
+            ->post(route('academic-head.schedules.save-draft', $scheduleA), [
+                'slots' => [$slotA->id => ['subject_id' => $subject->id, 'room_id' => $room->id, 'proctor_ids' => [$proctor->id]]],
+                'merge_confirmed' => '0',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($user)
+            ->post(route('academic-head.schedules.save-draft', $scheduleB), [
+                'slots' => [$slotB->id => ['subject_id' => $subject->id, 'room_id' => $roomB->id, 'proctor_ids' => [$proctor->id]]],
+                'merge_confirmed' => '1',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+    }
+
+    // ── Merge scenario seed helpers ───────────────────────────────────────────
+
+    /**
+     * Seeds two sections from two programs, both with the same shared subject,
+     * on the same exam date and time slot, with the requested student counts.
+     *
+     * @return array{0: SectionExamSchedule, 1: SectionExamSchedule, 2: SectionExamScheduleSlot, 3: SectionExamScheduleSlot, 4: Room, 5: Subject}
+     */
+    private function seedTwoSectionMergeScenario(User $user, int $roomCapacity, int $studentsA, int $studentsB): array
+    {
+        [$programA, $programB] = $this->seedTwoPrograms();
+
+        $subject = Subject::query()->create([
+            'code' => 'GE101',
+            'course_serial_number' => 'CSN-GE101',
+            'name' => 'Euthenics',
+            'units' => 3,
+        ]);
+
+        DB::table('program_subjects')->insert([
+            ['program_id' => $programA->id, 'subject_id' => $subject->id, 'year_level' => 1, 'semester' => 1],
+            ['program_id' => $programB->id, 'subject_id' => $subject->id, 'year_level' => 1, 'semester' => 1],
+        ]);
+
+        $sectionA = Section::query()->create(['program_id' => $programA->id, 'year_level' => 1, 'section_code' => 'BSCS-1A']);
+        $sectionB = Section::query()->create(['program_id' => $programB->id, 'year_level' => 1, 'section_code' => 'BSIS-1A']);
+
+        // Seed student profiles so Section::students()->count() returns the right number.
+        for ($i = 0; $i < $studentsA; $i++) {
+            $u = User::factory()->create(['role' => 'student', 'status' => 'active']);
+            DB::table('student_profiles')->insert([
+                'user_id'    => $u->id,
+                'student_id' => 'SID-A-' . $u->id,
+                'program_id' => $programA->id,
+                'year_level' => 1,
+                'section_id' => $sectionA->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        for ($i = 0; $i < $studentsB; $i++) {
+            $u = User::factory()->create(['role' => 'student', 'status' => 'active']);
+            DB::table('student_profiles')->insert([
+                'user_id'    => $u->id,
+                'student_id' => 'SID-B-' . $u->id,
+                'program_id' => $programB->id,
+                'year_level' => 1,
+                'section_id' => $sectionB->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $room = Room::query()->create(['name' => 'Shared Room', 'capacity' => $roomCapacity, 'is_available' => true]);
+
+        [$scheduleA, $slotA] = $this->seedDraftScheduleWithSlot($user, $programA, $sectionA);
+        [$scheduleB, $slotB] = $this->seedDraftScheduleWithSlot($user, $programB, $sectionB);
+
+        return [$scheduleA, $scheduleB, $slotA, $slotB, $room, $subject];
+    }
+
+    /** @return array{0: Program, 1: Program} */
+    private function seedTwoPrograms(): array
+    {
+        $programA = Program::query()->firstOrCreate(['code' => 'BSCS'], ['name' => 'BS Computer Science']);
+        $programB = Program::query()->firstOrCreate(['code' => 'BSIS'], ['name' => 'BS Information Systems']);
+
+        return [$programA, $programB];
+    }
+
+    /** @return array{0: SectionExamSchedule, 1: SectionExamScheduleSlot} */
+    private function seedDraftScheduleWithSlot(User $user, Program $program, Section $section): array
+    {
+        $matrix = $this->createUploadedMatrix($program, $user);
+
+        $schedule = SectionExamSchedule::query()->create([
+            'exam_matrix_id' => $matrix->id,
+            'section_id'     => $section->id,
+            'academic_year'  => '2025-2026',
+            'semester'       => 1,
+            'exam_period'    => 'Prelim',
+            'program_id'     => $program->id,
+            'status'         => 'draft',
+            'created_by'     => $user->id,
+        ]);
+
+        $slot = SectionExamScheduleSlot::query()->create([
+            'section_exam_schedule_id' => $schedule->id,
+            'slot_date'  => '2026-04-01',
+            'start_time' => '07:00:00',
+            'end_time'   => '08:30:00',
+            'is_fixed'   => false,
+            'subject_id' => null,
+            'room_id'    => null,
+        ]);
+
+        return [$schedule, $slot];
+    }
 }

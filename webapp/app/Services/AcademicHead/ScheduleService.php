@@ -293,7 +293,7 @@ class ScheduleService
         });
     }
 
-    public function saveDraftBatch(SectionExamSchedule $schedule, array $slotsData): SectionExamSchedule
+    public function saveDraftBatch(SectionExamSchedule $schedule, array $slotsData, bool $mergeConfirmed = false): SectionExamSchedule
     {
         $schedule->loadMissing(['section', 'slots.proctors', 'slots.schedule.section']);
 
@@ -326,16 +326,15 @@ class ScheduleService
                 ->values();
 
             $this->validateSubjectEligibility($slot, $subjectId);
-            $this->assertRoomAvailability($slot, $roomId);
-            $this->assertProctorAvailability($slot, $proctorIds);
-            $this->assertRoomCapacity($slot, $roomId);
+            $this->assertRoomEligibility($slot, $roomId, $subjectId);
+            $this->assertProctorEligibility($slot, $proctorIds, $mergeConfirmed);
 
             $updates[] = [
-                'slot' => $slot,
-                'subject_id' => $subjectId,
-                'room_id' => $roomId,
+                'slot'        => $slot,
+                'subject_id'  => $subjectId,
+                'room_id'     => $roomId,
                 'proctor_ids' => $proctorIds,
-                'has_room' => array_key_exists('room_id', $slotPayload),
+                'has_room'    => array_key_exists('room_id', $slotPayload),
                 'has_proctors' => array_key_exists('proctor_ids', $slotPayload),
             ];
         }
@@ -382,7 +381,8 @@ class ScheduleService
 
     public function getUnavailableRoomIdsForSlot(SectionExamScheduleSlot $slot, int $sectionStudentCount): array
     {
-        $conflictRoomIds = SectionExamScheduleSlot::query()
+        // Rooms already assigned to a different slot at the same time — shown as merge warnings, not hard blocks.
+        $mergeWarningRoomIds = SectionExamScheduleSlot::query()
             ->where('id', '!=', $slot->id)
             ->where('slot_date', $slot->slot_date)
             ->where('start_time', $slot->start_time)
@@ -394,6 +394,7 @@ class ScheduleService
             ->values()
             ->all();
 
+        // Rooms that cannot fit this section alone — hard block regardless of merge.
         $capacityRoomIds = Room::query()
             ->where('is_available', true)
             ->where('capacity', '<', $sectionStudentCount)
@@ -403,8 +404,8 @@ class ScheduleService
             ->all();
 
         return [
-            'conflict' => $conflictRoomIds,
-            'capacity' => $capacityRoomIds,
+            'merge_warning' => $mergeWarningRoomIds,
+            'capacity'      => $capacityRoomIds,
         ];
     }
 
@@ -492,34 +493,85 @@ class ScheduleService
         }
     }
 
-    private function assertRoomAvailability(SectionExamScheduleSlot $slot, ?int $roomId): void
+    /**
+     * Validates room assignment for a slot, handling both the simple (no conflict) and
+     * merge (same room already used by another section at the same time) scenarios.
+     *
+     * Merge is only permitted when every conflicting slot shares the same subject.
+     * Capacity is always enforced — using the aggregated student total when merging.
+     */
+    private function assertRoomEligibility(SectionExamScheduleSlot $slot, ?int $roomId, ?int $subjectId): void
     {
         if ($roomId === null) {
             return;
         }
 
-        $conflictExists = SectionExamScheduleSlot::query()
+        $room = Room::find($roomId);
+        if (! $room) {
+            return;
+        }
+
+        $conflictSlots = SectionExamScheduleSlot::query()
+            ->with(['schedule.section'])
             ->where('id', '!=', $slot->id)
             ->where('slot_date', $slot->slot_date)
             ->where('start_time', $slot->start_time)
             ->where('end_time', $slot->end_time)
             ->where('room_id', $roomId)
-            ->exists();
+            ->get();
 
-        if ($conflictExists) {
+        $currentStudents = $slot->schedule->section->students()->count();
+
+        if ($conflictSlots->isEmpty()) {
+            // No merge — apply simple single-section capacity check.
+            if ($room->capacity < $currentStudents) {
+                throw ValidationException::withMessages([
+                    'room_id' => 'Selected room capacity is lower than the section student count.',
+                ]);
+            }
+
+            return;
+        }
+
+        // Merge scenario — all conflicting slots must share the same subject.
+        foreach ($conflictSlots as $conflictSlot) {
+            $conflictSubjectId = $conflictSlot->subject_id !== null ? (int) $conflictSlot->subject_id : null;
+
+            if ($subjectId === null || $conflictSubjectId === null || $subjectId !== $conflictSubjectId) {
+                $sectionCode = $conflictSlot->schedule?->section?->section_code ?? 'another section';
+                throw ValidationException::withMessages([
+                    'room_id' => "Cannot merge: {$sectionCode} has a different subject assigned in this room and time slot. Merging is only allowed when all sections share the same subject.",
+                ]);
+            }
+        }
+
+        // Subjects match — enforce aggregated capacity across all merged sections.
+        $totalStudents = $currentStudents;
+        foreach ($conflictSlots as $conflictSlot) {
+            $totalStudents += $conflictSlot->schedule?->section?->students()?->count() ?? 0;
+        }
+
+        if ($room->capacity < $totalStudents) {
             throw ValidationException::withMessages([
-                'room_id' => 'Selected room is already assigned to another schedule at this time.',
+                'room_id' => "Room capacity ({$room->capacity}) is insufficient for the merged group ({$totalStudents} total students across merged sections).",
             ]);
         }
     }
 
-    private function assertProctorAvailability(SectionExamScheduleSlot $slot, Collection $proctorIds): void
+    /**
+     * Validates proctor assignment in merge-aware mode.
+     *
+     * A proctor conflict (same proctor in the same time slot) is allowed when the
+     * academic head has explicitly confirmed the merge. Without confirmation the
+     * save is blocked so the UI can present a warning modal first.
+     */
+    private function assertProctorEligibility(SectionExamScheduleSlot $slot, Collection $proctorIds, bool $mergeConfirmed): void
     {
         if ($proctorIds->isEmpty()) {
             return;
         }
 
-        $conflict = DB::table('section_exam_schedule_slot_proctors as pivot')
+        $conflictExists = DB::table('section_exam_schedule_slot_proctors as pivot')
             ->join('section_exam_schedule_slots as slots', 'pivot.section_exam_schedule_slot_id', '=', 'slots.id')
             ->where('slots.id', '!=', $slot->id)
             ->where('slots.slot_date', $slot->slot_date)
@@ -528,29 +580,9 @@ class ScheduleService
             ->whereIn('pivot.proctor_id', $proctorIds->all())
             ->exists();
 
-        if ($conflict) {
+        if ($conflictExists && ! $mergeConfirmed) {
             throw ValidationException::withMessages([
-                'proctor_ids' => 'One or more proctors are already assigned to another schedule at this time.',
-            ]);
-        }
-    }
-
-    private function assertRoomCapacity(SectionExamScheduleSlot $slot, ?int $roomId): void
-    {
-        if ($roomId === null) {
-            return;
-        }
-
-        $sectionStudentCount = $slot->schedule->section->students()->count();
-
-        $room = $slot->room()->getRelated()->newQuery()->find($roomId);
-        if (! $room) {
-            return;
-        }
-
-        if ($room->capacity < $sectionStudentCount) {
-            throw ValidationException::withMessages([
-                'room_id' => 'Selected room capacity is lower than the section student count.',
+                'proctor_ids' => 'One or more proctors are already assigned to another schedule at this time. Confirm the merge to proceed.',
             ]);
         }
     }

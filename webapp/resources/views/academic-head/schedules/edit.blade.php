@@ -48,10 +48,16 @@
                     <a href="{{ route('academic-head.schedules.index', $filters) }}" class="px-3 py-2 text-xs rounded bg-slate-600 text-white hover:bg-slate-700 font-semibold">Back to Schedules</a>
                 </div>
 
-                <div class="px-4 py-2 border-b bg-amber-50">
+                <div class="px-4 py-2 border-b bg-amber-50 space-y-1">
                     <p class="text-xs text-amber-800">
                         <span class="inline-block w-3 h-3 rounded-sm border border-amber-400 bg-amber-100 align-middle mr-1"></span>
                         Yellow subject dropdown means the selected subject is strictly from the General Exam Matrix.
+                    </p>
+                    <p class="text-xs text-orange-700">
+                        <span class="inline-block w-3 h-3 rounded-sm border border-orange-400 bg-orange-100 align-middle mr-1"></span>
+                        Orange room or proctor option means it is already used by another section in the same time slot.
+                        Selecting it will merge those sections together &mdash; a confirmation prompt will appear before saving.
+                        The system will verify that the combined student count does not exceed the room capacity.
                     </p>
                 </div>
 
@@ -115,16 +121,17 @@
                                                 @foreach ($rooms as $room)
                                                     @php
                                                         $roomId = (int) $room->id;
-                                                        $isConflictRoom = in_array($roomId, $roomAvailability['conflict'] ?? [], true);
-                                                        $isCapacityRoom = in_array($roomId, $roomAvailability['capacity'] ?? [], true);
-                                                        $isUnavailableRoom = $isConflictRoom || $isCapacityRoom;
-                                                        $reasonLabel = $isConflictRoom
-                                                            ? 'Unavailable: conflict'
+                                                        $isMergeWarningRoom = in_array($roomId, $roomAvailability['merge_warning'] ?? [], true);
+                                                        $isCapacityRoom     = in_array($roomId, $roomAvailability['capacity'] ?? [], true);
+                                                        $reasonLabel = $isMergeWarningRoom
+                                                            ? 'Warning: merge conflict'
                                                             : ($isCapacityRoom ? 'Unavailable: capacity' : null);
                                                     @endphp
                                                     <option value="{{ $room->id }}"
                                                         @selected((int) $slot->room_id === $roomId)
-                                                        @disabled($isUnavailableRoom)
+                                                        @disabled($isCapacityRoom)
+                                                        data-merge-warning="{{ $isMergeWarningRoom ? 'true' : 'false' }}"
+                                                        style="{{ $isMergeWarningRoom ? 'background-color:#fff7ed;color:#c2410c;' : '' }}"
                                                     >
                                                         {{ $room->name }} ({{ $room->capacity }}){{ $reasonLabel ? ' - ' . $reasonLabel : '' }}
                                                     </option>
@@ -134,11 +141,16 @@
                                         <td class="px-3 py-2">
                                             <select name="proctor_ids[]" multiple class="w-72 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
                                                 @foreach ($proctors as $proctor)
-                                                    @php($proctorId = (int) $proctor->id)
+                                                    @php
+                                                        $proctorId = (int) $proctor->id;
+                                                        $isProctorWarning = in_array($proctorId, $proctorUnavailable, true);
+                                                    @endphp
                                                     <option value="{{ $proctor->id }}"
                                                         @selected($slot->proctors->contains('id', $proctor->id))
-                                                        @disabled(in_array($proctorId, $proctorUnavailable, true))>
-                                                        {{ $proctor->full_name }}{{ in_array($proctorId, $proctorUnavailable, true) ? ' - Unavailable' : '' }}
+                                                        data-merge-warning="{{ $isProctorWarning ? 'true' : 'false' }}"
+                                                        style="{{ $isProctorWarning ? 'background-color:#fff7ed;color:#c2410c;' : '' }}"
+                                                    >
+                                                        {{ $proctor->full_name }}{{ $isProctorWarning ? ' - Warning: merge conflict' : '' }}
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -162,15 +174,45 @@
         </div>
     </div>
 
+    {{-- Merge confirmation modal --}}
+    <div id="merge-confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50" style="display:none;">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 class="font-bold text-gray-900 text-lg mb-2">Merge Conflict Warning</h3>
+            <p class="text-sm text-gray-600 mb-3">
+                One or more selected rooms or proctors are already assigned to another section in the same time slot.
+                Saving will <strong>merge</strong> those sections together.
+            </p>
+            <ul id="merge-warning-list" class="text-sm text-orange-800 bg-orange-50 border border-orange-200 rounded p-3 mb-3 list-disc list-inside space-y-1 max-h-48 overflow-y-auto"></ul>
+            <p class="text-xs text-gray-500 mb-4">
+                The system will verify that the combined student count does not exceed the room&rsquo;s capacity when you save.
+                Merge is only allowed when all merged sections share the same subject for that slot.
+            </p>
+            <div class="flex gap-3 justify-end">
+                <button type="button" id="merge-cancel-btn"
+                    class="px-4 py-2 text-sm border rounded text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="button" id="merge-confirm-btn"
+                    class="px-4 py-2 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 font-semibold">
+                    Confirm Merge &amp; Save
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const draftForm = document.getElementById('save-draft-form');
             const payloadContainer = document.getElementById('save-draft-payload');
             const slotRows = document.querySelectorAll('tr.js-slot-row[data-slot-id]');
+            const mergeModal = document.getElementById('merge-confirm-modal');
+            const mergeWarningList = document.getElementById('merge-warning-list');
+
             if (!draftForm || !payloadContainer) {
                 return;
             }
 
+            // ── Matrix subject indicator ──────────────────────────────────────────
             const syncMatrixSubjectIndicator = (subjectSelect) => {
                 if (!(subjectSelect instanceof HTMLSelectElement)) {
                     return;
@@ -197,47 +239,115 @@
             const subjectSelects = document.querySelectorAll('[data-slot-subject-select="true"]');
             subjectSelects.forEach((selectElement) => {
                 syncMatrixSubjectIndicator(selectElement);
-
                 selectElement.addEventListener('change', function () {
                     syncMatrixSubjectIndicator(this);
                 });
             });
 
-            draftForm.addEventListener('submit', function () {
+            // ── Merge warning detection ───────────────────────────────────────────
+            const collectMergeWarnings = () => {
+                const warnings = [];
+
+                slotRows.forEach((row) => {
+                    const timeCell = row.querySelector('td:first-child');
+                    const timeText = timeCell ? timeCell.textContent.trim() : 'Unknown slot';
+
+                    const roomSelect = row.querySelector('select[name="room_id"]');
+                    if (roomSelect) {
+                        const selected = roomSelect.options[roomSelect.selectedIndex];
+                        if (selected && selected.dataset.mergeWarning === 'true') {
+                            const label = selected.text.replace(' - Warning: merge conflict', '').trim();
+                            warnings.push(`Room at ${timeText}: ${label}`);
+                        }
+                    }
+
+                    const proctorSelect = row.querySelector('select[name="proctor_ids[]"]');
+                    if (proctorSelect instanceof HTMLSelectElement) {
+                        Array.from(proctorSelect.selectedOptions).forEach((opt) => {
+                            if (opt.dataset.mergeWarning === 'true') {
+                                const label = opt.text.replace(' - Warning: merge conflict', '').trim();
+                                warnings.push(`Proctor at ${timeText}: ${label}`);
+                            }
+                        });
+                    }
+                });
+
+                return warnings;
+            };
+
+            // ── Payload builder (called on every real submit) ─────────────────────
+            const buildPayload = (mergeConfirmed) => {
                 payloadContainer.innerHTML = '';
 
                 slotRows.forEach((row) => {
                     const slotId = row.getAttribute('data-slot-id');
-                    if (!slotId) {
-                        return;
-                    }
+                    if (!slotId) return;
 
                     const subjectSelect = row.querySelector('select[name="subject_id"]');
-                    const roomSelect = row.querySelector('select[name="room_id"]');
+                    const roomSelect    = row.querySelector('select[name="room_id"]');
                     const proctorSelect = row.querySelector('select[name="proctor_ids[]"]');
 
                     const subjectInput = document.createElement('input');
-                    subjectInput.type = 'hidden';
-                    subjectInput.name = `slots[${slotId}][subject_id]`;
+                    subjectInput.type  = 'hidden';
+                    subjectInput.name  = `slots[${slotId}][subject_id]`;
                     subjectInput.value = subjectSelect ? subjectSelect.value : '';
                     payloadContainer.appendChild(subjectInput);
 
                     const roomInput = document.createElement('input');
-                    roomInput.type = 'hidden';
-                    roomInput.name = `slots[${slotId}][room_id]`;
+                    roomInput.type  = 'hidden';
+                    roomInput.name  = `slots[${slotId}][room_id]`;
                     roomInput.value = roomSelect ? roomSelect.value : '';
                     payloadContainer.appendChild(roomInput);
 
                     if (proctorSelect instanceof HTMLSelectElement) {
                         Array.from(proctorSelect.selectedOptions).forEach((option) => {
                             const proctorInput = document.createElement('input');
-                            proctorInput.type = 'hidden';
-                            proctorInput.name = `slots[${slotId}][proctor_ids][]`;
+                            proctorInput.type  = 'hidden';
+                            proctorInput.name  = `slots[${slotId}][proctor_ids][]`;
                             proctorInput.value = option.value;
                             payloadContainer.appendChild(proctorInput);
                         });
                     }
                 });
+
+                const mergeInput = document.createElement('input');
+                mergeInput.type  = 'hidden';
+                mergeInput.name  = 'merge_confirmed';
+                mergeInput.value = mergeConfirmed ? '1' : '0';
+                payloadContainer.appendChild(mergeInput);
+            };
+
+            // ── Form submit handler ───────────────────────────────────────────────
+            draftForm.addEventListener('submit', function (e) {
+                const warnings = collectMergeWarnings();
+
+                if (warnings.length > 0 && !draftForm.dataset.mergeConfirmed) {
+                    e.preventDefault();
+
+                    mergeWarningList.innerHTML = '';
+                    warnings.forEach((w) => {
+                        const li = document.createElement('li');
+                        li.textContent = w;
+                        mergeWarningList.appendChild(li);
+                    });
+
+                    mergeModal.style.display = 'flex';
+                    return;
+                }
+
+                buildPayload(!!draftForm.dataset.mergeConfirmed);
+            });
+
+            // ── Modal buttons ─────────────────────────────────────────────────────
+            document.getElementById('merge-confirm-btn').addEventListener('click', function () {
+                mergeModal.style.display = 'none';
+                draftForm.dataset.mergeConfirmed = 'true';
+                buildPayload(true);
+                draftForm.submit();
+            });
+
+            document.getElementById('merge-cancel-btn').addEventListener('click', function () {
+                mergeModal.style.display = 'none';
             });
         });
     </script>

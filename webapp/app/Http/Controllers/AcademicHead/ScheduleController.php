@@ -103,6 +103,7 @@ class ScheduleController extends Controller
             ->whereIn('exam_period', $examPeriods)
             ->get();
 
+        /** @var array<string, array<int, string>> $sectionStatusesByPeriod */
         $sectionStatusesByPeriod = [];
 
         foreach ($examPeriods as $period) {
@@ -163,8 +164,8 @@ class ScheduleController extends Controller
 
             if ($slot->room_id) {
                 $selectedRoomId = (int) $slot->room_id;
-                $roomAvailability['conflict'] = array_values(array_filter(
-                    $roomAvailability['conflict'],
+                $roomAvailability['merge_warning'] = array_values(array_filter(
+                    $roomAvailability['merge_warning'],
                     fn (int $roomId) => $roomId !== $selectedRoomId
                 ));
                 $roomAvailability['capacity'] = array_values(array_filter(
@@ -452,14 +453,19 @@ class ScheduleController extends Controller
     public function saveDraft(Request $request, SectionExamSchedule $schedule, ScheduleService $service): RedirectResponse
     {
         $validated = $request->validate([
-            'slots' => ['nullable', 'array'],
-            'slots.*.subject_id' => ['nullable', 'exists:subjects,id'],
-            'slots.*.room_id' => ['nullable', 'exists:rooms,id'],
-            'slots.*.proctor_ids' => ['nullable', 'array'],
-            'slots.*.proctor_ids.*' => ['integer', Rule::exists('users', 'id')->where('role', 'proctor')],
+            'slots'                   => ['nullable', 'array'],
+            'slots.*.subject_id'      => ['nullable', 'exists:subjects,id'],
+            'slots.*.room_id'         => ['nullable', 'exists:rooms,id'],
+            'slots.*.proctor_ids'     => ['nullable', 'array'],
+            'slots.*.proctor_ids.*'   => ['integer', Rule::exists('users', 'id')->where('role', 'proctor')],
+            'merge_confirmed'         => ['nullable', 'boolean'],
         ]);
 
-        $service->saveDraftBatch($schedule, $validated['slots'] ?? []);
+        $service->saveDraftBatch(
+            $schedule,
+            $validated['slots'] ?? [],
+            (bool) ($validated['merge_confirmed'] ?? false)
+        );
 
         return back()->with('status', 'Draft schedule saved successfully.');
     }
