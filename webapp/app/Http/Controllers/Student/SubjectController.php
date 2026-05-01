@@ -11,14 +11,17 @@ class SubjectController extends Controller
 {
     public function index(Request $request, ExamPortalService $portalService): View
     {
+        $user = $request->user()?->loadMissing('studentProfile.section.proctor');
         $setting = $portalService->currentSetting();
         $selectedPeriod = $portalService->resolvePeriod($request->string('period')->toString() ?: null, $setting);
+        $adviserName = $user?->studentProfile?->section?->proctor?->full_name ?? 'TBA';
 
         return view('student.subjects.index', [
             'setting' => $setting,
             'periods' => ExamPortalService::PERIODS,
             'selectedPeriod' => $selectedPeriod,
-            'subjectRows' => $portalService->studentScheduleRows($request->user(), $selectedPeriod, $setting),
+            'adviserName' => $adviserName,
+            'subjectRows' => $portalService->studentScheduleRows($user, $selectedPeriod, $setting),
         ]);
     }
 }

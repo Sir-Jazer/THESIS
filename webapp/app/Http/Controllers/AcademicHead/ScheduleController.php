@@ -456,8 +456,7 @@ class ScheduleController extends Controller
             'slots'                   => ['nullable', 'array'],
             'slots.*.subject_id'      => ['nullable', 'exists:subjects,id'],
             'slots.*.room_id'         => ['nullable', 'exists:rooms,id'],
-            'slots.*.proctor_ids'     => ['nullable', 'array'],
-            'slots.*.proctor_ids.*'   => ['integer', Rule::exists('users', 'id')->where('role', 'proctor')],
+            'slots.*.proctor_id'      => ['nullable', Rule::exists('users', 'id')->where('role', 'proctor')],
             'merge_confirmed'         => ['nullable', 'boolean'],
         ]);
 

@@ -230,9 +230,9 @@
             const selectedSectionId = '{{ $filters['section_id'] }}';
 
             const statusMeta = {
-                uploaded: { label: 'Uploaded', color: '#15803d', marker: 'G' },
-                draft: { label: 'Draft Saved', color: '#b45309', marker: 'Y' },
-                no_plot: { label: 'Not Yet Plotted', color: '#b91c1c', marker: 'R' },
+                uploaded: { label: 'Uploaded', color: '#15803d', marker: '🟢' },
+                draft: { label: 'Draft Saved', color: '#b45309', marker: '🟡' },
+                no_plot: { label: 'Not Yet Plotted', color: '#b91c1c', marker: '🔴' },
             };
 
             const uniqueSorted = (arr) => Array.from(new Set(arr)).sort((a, b) => a - b);
@@ -260,7 +260,7 @@
             const buildStatusLabel = (baseLabel, status) => {
                 const meta = statusMeta[status] || statusMeta.no_plot;
 
-                return '[' + meta.marker + '] ' + baseLabel + ' (' + meta.label + ')';
+                return meta.marker + ' ' + baseLabel + ' (' + meta.label + ')';
             };
 
             const setOptions = (element, placeholder, options, selectedValue) => {

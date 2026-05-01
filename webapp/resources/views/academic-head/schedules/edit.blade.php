@@ -53,9 +53,9 @@
                         <span class="inline-block w-3 h-3 rounded-sm border border-amber-400 bg-amber-100 align-middle mr-1"></span>
                         Yellow subject dropdown means the selected subject is strictly from the General Exam Matrix.
                     </p>
-                    <p class="text-xs text-orange-700">
-                        <span class="inline-block w-3 h-3 rounded-sm border border-orange-400 bg-orange-100 align-middle mr-1"></span>
-                        Orange room or proctor option means it is already used by another section in the same time slot.
+                    <p class="text-xs text-red-700">
+                        <span class="inline-block w-3 h-3 rounded-sm border border-red-400 bg-red-100 align-middle mr-1"></span>
+                        Red room or proctor option means it is already used by another section in the same time slot.
                         Selecting it will merge those sections together &mdash; a confirmation prompt will appear before saving.
                         The system will verify that the combined student count does not exceed the room capacity.
                     </p>
@@ -89,6 +89,7 @@
                                         $proctorUnavailable = $proctorAvailabilityBySlot[$slot->id] ?? [];
                                         $matrixSubjectIds = (array) ($matrixAssignedSubjectBySlot[$slot->id] ?? []);
                                         $isMatrixAssignedSelection = count($matrixSubjectIds) > 0 && in_array((int) $slot->subject_id, $matrixSubjectIds, true);
+                                        $selectedProctorId = (int) ($slot->proctors->first()?->id ?? 0);
                                     @endphp
                                     <tr class="border-t align-top js-slot-row" data-slot-id="{{ $slot->id }}">
                                         <td class="px-3 py-2 whitespace-nowrap">{{ substr((string) $slot->start_time, 0, 5) }}-{{ substr((string) $slot->end_time, 0, 5) }}</td>
@@ -131,7 +132,7 @@
                                                         @selected((int) $slot->room_id === $roomId)
                                                         @disabled($isCapacityRoom)
                                                         data-merge-warning="{{ $isMergeWarningRoom ? 'true' : 'false' }}"
-                                                        style="{{ $isMergeWarningRoom ? 'background-color:#fff7ed;color:#c2410c;' : '' }}"
+                                                        style="{{ $isMergeWarningRoom ? 'background-color:#fee2e2;color:#991b1b;' : '' }}"
                                                     >
                                                         {{ $room->name }} ({{ $room->capacity }}){{ $reasonLabel ? ' - ' . $reasonLabel : '' }}
                                                     </option>
@@ -139,16 +140,17 @@
                                             </select>
                                         </td>
                                         <td class="px-3 py-2">
-                                            <select name="proctor_ids[]" multiple class="w-72 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
+                                            <select name="proctor_id" class="w-72 rounded-md border-gray-300 text-sm" @disabled($schedule->status === 'published')>
+                                                <option value="">Unassigned</option>
                                                 @foreach ($proctors as $proctor)
                                                     @php
                                                         $proctorId = (int) $proctor->id;
                                                         $isProctorWarning = in_array($proctorId, $proctorUnavailable, true);
                                                     @endphp
                                                     <option value="{{ $proctor->id }}"
-                                                        @selected($slot->proctors->contains('id', $proctor->id))
+                                                        @selected($selectedProctorId === $proctorId)
                                                         data-merge-warning="{{ $isProctorWarning ? 'true' : 'false' }}"
-                                                        style="{{ $isProctorWarning ? 'background-color:#fff7ed;color:#c2410c;' : '' }}"
+                                                        style="{{ $isProctorWarning ? 'background-color:#fee2e2;color:#991b1b;' : '' }}"
                                                     >
                                                         {{ $proctor->full_name }}{{ $isProctorWarning ? ' - Warning: merge conflict' : '' }}
                                                     </option>
@@ -182,7 +184,7 @@
                 One or more selected rooms or proctors are already assigned to another section in the same time slot.
                 Saving will <strong>merge</strong> those sections together.
             </p>
-            <ul id="merge-warning-list" class="text-sm text-orange-800 bg-orange-50 border border-orange-200 rounded p-3 mb-3 list-disc list-inside space-y-1 max-h-48 overflow-y-auto"></ul>
+            <ul id="merge-warning-list" class="text-sm text-red-800 bg-red-50 border border-red-200 rounded p-3 mb-3 list-disc list-inside space-y-1 max-h-48 overflow-y-auto"></ul>
             <p class="text-xs text-gray-500 mb-4">
                 The system will verify that the combined student count does not exceed the room&rsquo;s capacity when you save.
                 Merge is only allowed when all merged sections share the same subject for that slot.
@@ -193,7 +195,7 @@
                     Cancel
                 </button>
                 <button type="button" id="merge-confirm-btn"
-                    class="px-4 py-2 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 font-semibold">
+                    class="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 font-semibold">
                     Confirm Merge &amp; Save
                 </button>
             </div>
@@ -261,14 +263,13 @@
                         }
                     }
 
-                    const proctorSelect = row.querySelector('select[name="proctor_ids[]"]');
+                    const proctorSelect = row.querySelector('select[name="proctor_id"]');
                     if (proctorSelect instanceof HTMLSelectElement) {
-                        Array.from(proctorSelect.selectedOptions).forEach((opt) => {
-                            if (opt.dataset.mergeWarning === 'true') {
-                                const label = opt.text.replace(' - Warning: merge conflict', '').trim();
-                                warnings.push(`Proctor at ${timeText}: ${label}`);
-                            }
-                        });
+                        const selected = proctorSelect.options[proctorSelect.selectedIndex];
+                        if (selected && selected.dataset.mergeWarning === 'true') {
+                            const label = selected.text.replace(' - Warning: merge conflict', '').trim();
+                            warnings.push(`Proctor at ${timeText}: ${label}`);
+                        }
                     }
                 });
 
@@ -285,7 +286,7 @@
 
                     const subjectSelect = row.querySelector('select[name="subject_id"]');
                     const roomSelect    = row.querySelector('select[name="room_id"]');
-                    const proctorSelect = row.querySelector('select[name="proctor_ids[]"]');
+                    const proctorSelect = row.querySelector('select[name="proctor_id"]');
 
                     const subjectInput = document.createElement('input');
                     subjectInput.type  = 'hidden';
@@ -300,13 +301,11 @@
                     payloadContainer.appendChild(roomInput);
 
                     if (proctorSelect instanceof HTMLSelectElement) {
-                        Array.from(proctorSelect.selectedOptions).forEach((option) => {
-                            const proctorInput = document.createElement('input');
-                            proctorInput.type  = 'hidden';
-                            proctorInput.name  = `slots[${slotId}][proctor_ids][]`;
-                            proctorInput.value = option.value;
-                            payloadContainer.appendChild(proctorInput);
-                        });
+                        const proctorInput = document.createElement('input');
+                        proctorInput.type  = 'hidden';
+                        proctorInput.name  = `slots[${slotId}][proctor_id]`;
+                        proctorInput.value = proctorSelect.value;
+                        payloadContainer.appendChild(proctorInput);
                     }
                 });
 

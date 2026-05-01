@@ -16,6 +16,7 @@
                 <p class="text-sm text-slate-600"><span class="font-semibold text-slate-900">Academic Year:</span> {{ $setting?->academic_year ?? 'Not set' }}</p>
                 <p class="mt-2 text-sm text-slate-600"><span class="font-semibold text-slate-900">Term:</span> {{ $semesterLabel }}</p>
                 <p class="mt-2 text-sm text-slate-600"><span class="font-semibold text-slate-900">Exam Period:</span> {{ $selectedPeriod }}</p>
+                <p class="mt-2 text-sm text-slate-600"><span class="font-semibold text-slate-900">Adviser:</span> {{ $adviserName }}</p>
             </div>
 
             <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

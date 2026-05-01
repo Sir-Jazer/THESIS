@@ -319,11 +319,8 @@ class ScheduleService
 
             $subjectId = $this->nullableInt(Arr::get($slotPayload, 'subject_id'));
             $roomId = $this->nullableInt(Arr::get($slotPayload, 'room_id'));
-            $proctorIds = collect(Arr::get($slotPayload, 'proctor_ids', []))
-                ->map(fn ($id) => (int) $id)
-                ->filter(fn (int $id) => $id > 0)
-                ->unique()
-                ->values();
+            $proctorId = $this->nullableInt(Arr::get($slotPayload, 'proctor_id'));
+            $proctorIds = $proctorId !== null ? collect([$proctorId]) : collect();
 
             $this->validateSubjectEligibility($slot, $subjectId);
             $this->assertRoomEligibility($slot, $roomId, $subjectId);
@@ -335,7 +332,7 @@ class ScheduleService
                 'room_id'     => $roomId,
                 'proctor_ids' => $proctorIds,
                 'has_room'    => array_key_exists('room_id', $slotPayload),
-                'has_proctors' => array_key_exists('proctor_ids', $slotPayload),
+                'has_proctors' => array_key_exists('proctor_id', $slotPayload),
             ];
         }
 
@@ -582,7 +579,7 @@ class ScheduleService
 
         if ($conflictExists && ! $mergeConfirmed) {
             throw ValidationException::withMessages([
-                'proctor_ids' => 'One or more proctors are already assigned to another schedule at this time. Confirm the merge to proceed.',
+                'proctor_id' => 'Selected proctor is already assigned to another schedule at this time. Confirm the merge to proceed.',
             ]);
         }
     }

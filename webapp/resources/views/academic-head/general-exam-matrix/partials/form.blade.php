@@ -97,7 +97,7 @@
             </p>
         </div>
         <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 font-medium">
-            Selected subject = fixed slot
+            Selected Subject = Fixed Slot
         </div>
     </div>
 
@@ -149,7 +149,7 @@
                                                     list="matrix-subject-options"
                                                     value="{{ $selectedSubjectLabel }}"
                                                     class="block w-full rounded-md border-gray-300 text-sm js-subject-autofill"
-                                                    placeholder="Open slot or type subject code, serial, or name"
+                                                    placeholder="Open slot or type a subject"
                                                     autocomplete="off"
                                                 >
                                                 <input
