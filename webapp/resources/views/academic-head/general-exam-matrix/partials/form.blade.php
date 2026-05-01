@@ -14,6 +14,12 @@
             ->values()
             ->all();
     };
+    $subjectOptionLabel = function ($subject): string {
+        return $subject->code.' | '.($subject->course_serial_number ?: 'No Serial').' - '.$subject->name;
+    };
+    $subjectLabelById = $subjects
+        ->mapWithKeys(fn ($subject) => [$subject->id => $subjectOptionLabel($subject)])
+        ->all();
 
     if (isset($matrix)) {
         $sortedDays = $matrix->slots
@@ -131,21 +137,31 @@
                             <td class="px-4 py-3 align-top">
                                 <div class="space-y-2 js-slot-subjects">
                                     @foreach ($selectedSubjectIds as $selectedSubjectId)
-                                        <div class="flex items-center gap-2 js-subject-row">
-                                            <select
-                                                name="exam_days[{{ $dayIndex }}][periods][{{ $periodIndex }}][subject_ids][]"
-                                                class="block w-full rounded-md border-gray-300 text-sm"
-                                            >
-                                                <option value="">Open slot</option>
-                                                @foreach ($subjects as $subject)
-                                                    <option
-                                                        value="{{ $subject->id }}"
-                                                        @selected((string) $selectedSubjectId !== '' && (int) $selectedSubjectId === $subject->id)
-                                                    >
-                                                        {{ $subject->code }} | {{ $subject->course_serial_number ?: 'No Serial' }} - {{ $subject->name }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
+                                        @php
+                                            $selectedSubjectLabel = (string) $selectedSubjectId !== ''
+                                                ? ($subjectLabelById[(int) $selectedSubjectId] ?? '')
+                                                : '';
+                                        @endphp
+                                        <div class="flex items-start gap-2 js-subject-row">
+                                            <div class="w-full">
+                                                <input
+                                                    type="text"
+                                                    list="matrix-subject-options"
+                                                    value="{{ $selectedSubjectLabel }}"
+                                                    class="block w-full rounded-md border-gray-300 text-sm js-subject-autofill"
+                                                    placeholder="Open slot or type subject code, serial, or name"
+                                                    autocomplete="off"
+                                                >
+                                                <input
+                                                    type="hidden"
+                                                    name="exam_days[{{ $dayIndex }}][periods][{{ $periodIndex }}][subject_ids][]"
+                                                    value="{{ (string) $selectedSubjectId !== '' ? (int) $selectedSubjectId : '' }}"
+                                                    class="js-subject-id"
+                                                >
+                                                <p class="mt-1 hidden text-xs text-red-600 js-subject-invalid">
+                                                    Select a suggested subject or clear this field to keep the slot open.
+                                                </p>
+                                            </div>
                                             <button
                                                 type="button"
                                                 class="js-remove-subject-row hidden rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
@@ -176,10 +192,85 @@
     <a href="{{ route('academic-head.general-exam-matrix.index') }}" class="px-4 py-2 rounded bg-slate-600 text-white hover:bg-slate-700 font-semibold">Cancel</a>
 </div>
 
+<datalist id="matrix-subject-options">
+    @foreach ($subjects as $subject)
+        <option
+            value="{{ $subjectOptionLabel($subject) }}"
+            data-subject-id="{{ $subject->id }}"
+        ></option>
+    @endforeach
+</datalist>
+
 @once
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const subjectOptionsElement = document.getElementById('matrix-subject-options');
+            const subjectLabelToId = new Map();
+
+            if (subjectOptionsElement instanceof HTMLDataListElement) {
+                Array.from(subjectOptionsElement.options).forEach((option) => {
+                    const subjectId = option.dataset.subjectId;
+                    const label = option.value.trim();
+
+                    if (!subjectId || label === '') {
+                        return;
+                    }
+
+                    subjectLabelToId.set(label, subjectId);
+                });
+            }
+
             const containers = document.querySelectorAll('.js-slot-subjects');
+            const matrixForm = document.querySelector('form');
+
+            const getRowFields = (row) => {
+                return {
+                    autofillInput: row.querySelector('.js-subject-autofill'),
+                    hiddenInput: row.querySelector('.js-subject-id'),
+                    invalidMessage: row.querySelector('.js-subject-invalid'),
+                };
+            };
+
+            const setRowInvalidState = (row, isInvalid) => {
+                const { autofillInput, invalidMessage } = getRowFields(row);
+                if (!(autofillInput instanceof HTMLInputElement)) {
+                    return;
+                }
+
+                autofillInput.classList.toggle('border-red-300', isInvalid);
+                autofillInput.classList.toggle('focus:border-red-500', isInvalid);
+                autofillInput.classList.toggle('focus:ring-red-500', isInvalid);
+
+                if (invalidMessage instanceof HTMLElement) {
+                    invalidMessage.classList.toggle('hidden', !isInvalid);
+                }
+            };
+
+            const syncRowSelection = (row, enforceMatch = false) => {
+                const { autofillInput, hiddenInput } = getRowFields(row);
+                if (!(autofillInput instanceof HTMLInputElement) || !(hiddenInput instanceof HTMLInputElement)) {
+                    return true;
+                }
+
+                const normalizedLabel = autofillInput.value.trim();
+                if (normalizedLabel === '') {
+                    hiddenInput.value = '';
+                    setRowInvalidState(row, false);
+                    return true;
+                }
+
+                const subjectId = subjectLabelToId.get(normalizedLabel);
+                if (subjectId !== undefined) {
+                    hiddenInput.value = subjectId;
+                    setRowInvalidState(row, false);
+                    return true;
+                }
+
+                hiddenInput.value = '';
+                setRowInvalidState(row, enforceMatch);
+
+                return !enforceMatch;
+            };
 
             const updateRemoveButtons = (container) => {
                 const rows = container.querySelectorAll('.js-subject-row');
@@ -200,17 +291,62 @@
                 }
 
                 const row = firstRow.cloneNode(true);
-                const select = row.querySelector('select');
+                const { autofillInput, hiddenInput } = getRowFields(row);
 
-                if (select) {
-                    select.value = '';
+                if (autofillInput instanceof HTMLInputElement) {
+                    autofillInput.value = '';
                 }
+
+                if (hiddenInput instanceof HTMLInputElement) {
+                    hiddenInput.value = '';
+                }
+
+                setRowInvalidState(row, false);
 
                 return row;
             };
 
             containers.forEach((container) => {
                 updateRemoveButtons(container);
+                container.querySelectorAll('.js-subject-row').forEach((row) => {
+                    syncRowSelection(row, false);
+                });
+
+                container.addEventListener('input', (event) => {
+                    const target = event.target;
+                    if (!(target instanceof HTMLElement) || !target.classList.contains('js-subject-autofill')) {
+                        return;
+                    }
+
+                    const row = target.closest('.js-subject-row');
+                    if (row) {
+                        syncRowSelection(row, false);
+                    }
+                });
+
+                container.addEventListener('change', (event) => {
+                    const target = event.target;
+                    if (!(target instanceof HTMLElement) || !target.classList.contains('js-subject-autofill')) {
+                        return;
+                    }
+
+                    const row = target.closest('.js-subject-row');
+                    if (row) {
+                        syncRowSelection(row, true);
+                    }
+                });
+
+                container.addEventListener('focusout', (event) => {
+                    const target = event.target;
+                    if (!(target instanceof HTMLElement) || !target.classList.contains('js-subject-autofill')) {
+                        return;
+                    }
+
+                    const row = target.closest('.js-subject-row');
+                    if (row) {
+                        syncRowSelection(row, true);
+                    }
+                });
 
                 container.addEventListener('click', (event) => {
                     const target = event.target;
@@ -245,6 +381,29 @@
                     }
                 });
             });
+
+            if (matrixForm instanceof HTMLFormElement) {
+                matrixForm.addEventListener('submit', (event) => {
+                    let firstInvalidInput = null;
+
+                    containers.forEach((container) => {
+                        container.querySelectorAll('.js-subject-row').forEach((row) => {
+                            const isValid = syncRowSelection(row, true);
+                            if (!isValid && firstInvalidInput === null) {
+                                const { autofillInput } = getRowFields(row);
+                                if (autofillInput instanceof HTMLInputElement) {
+                                    firstInvalidInput = autofillInput;
+                                }
+                            }
+                        });
+                    });
+
+                    if (firstInvalidInput !== null) {
+                        event.preventDefault();
+                        firstInvalidInput.focus();
+                    }
+                });
+            }
         });
     </script>
 @endonce
