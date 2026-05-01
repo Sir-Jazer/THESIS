@@ -46,6 +46,7 @@
                             </div>
                             <div class="flex gap-2">
                                 <a href="{{ route('academic-head.general-exam-matrix.edit', $matrix) }}" class="px-3 py-2 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">Edit</a>
+                                <a href="{{ route('academic-head.general-exam-matrix.classify-duplicates', $matrix) }}" class="px-3 py-2 text-xs rounded bg-indigo-600 text-white hover:bg-indigo-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">Classify Duplicates</a>
 
                                 <form method="POST" action="{{ route('academic-head.general-exam-matrix.upload', $matrix) }}">
                                     @csrf

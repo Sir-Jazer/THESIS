@@ -22,3 +22,4 @@ cd "C:\Jazer Thesis\THESIS\webapp"
 
 Run this in powershell if there are css assets updates:
 Set-Location "c:\Jazer Thesis\THESIS\webapp"
+& npm.cmd run build

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class ExamMatrix extends Model
@@ -53,6 +54,20 @@ class ExamMatrix extends Model
         return $this->hasMany(SectionExamSchedule::class);
     }
 
+    public function subjectBatches()
+    {
+        return $this->hasMany(ExamMatrixSubjectBatch::class)
+            ->orderBy('subject_id')
+            ->orderBy('batch_no');
+    }
+
+    public function subjectBatchSectionAssignments()
+    {
+        return $this->hasMany(ExamMatrixSubjectBatchSectionAssignment::class)
+            ->orderBy('subject_id')
+            ->orderBy('section_id');
+    }
+
     public function isUploaded(): bool
     {
         return $this->status === 'uploaded';
@@ -61,5 +76,25 @@ class ExamMatrix extends Model
     public function isDraft(): bool
     {
         return $this->status === 'draft';
+    }
+
+    public function scopeUploadedForScheduleContext(
+        Builder $query,
+        string $academicYear,
+        int $semester,
+        string $examPeriod,
+        int $programId
+    ): Builder {
+        return $query
+            ->where('academic_year', $academicYear)
+            ->where('semester', $semester)
+            ->where('exam_period', $examPeriod)
+            ->where('status', 'uploaded')
+            ->where(function (Builder $scope) use ($programId): void {
+                $scope->where('program_id', $programId)
+                    ->orWhereNull('program_id');
+            })
+            ->orderByRaw('CASE WHEN program_id = ? THEN 0 WHEN program_id IS NULL THEN 1 ELSE 2 END', [$programId])
+            ->latest('id');
     }
 }

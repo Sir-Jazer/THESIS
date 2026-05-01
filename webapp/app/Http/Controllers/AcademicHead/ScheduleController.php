@@ -24,6 +24,7 @@ class ScheduleController extends Controller
     {
         $setting = AcademicSetting::current();
         $settingSemester = $this->normalizeSemester($setting?->semester) ?? 1;
+        $examPeriods = ['Prelim', 'Midterm', 'Prefinals', 'Finals'];
 
         $filters = [
             'academic_year' => $setting?->academic_year ?? now()->year . '-' . (now()->year + 1),
@@ -68,11 +69,12 @@ class ScheduleController extends Controller
                 ->first();
 
             $matchingMatrix = ExamMatrix::query()
-                ->where('academic_year', $filters['academic_year'])
-                ->where('semester', $filters['semester'])
-                ->where('exam_period', $filters['exam_period'])
-                ->where('status', 'uploaded')
-                ->latest()
+                ->uploadedForScheduleContext(
+                    (string) $filters['academic_year'],
+                    (int) $filters['semester'],
+                    (string) $filters['exam_period'],
+                    (int) $filters['program_id']
+                )
                 ->first();
 
             if ($selectedSchedule && $selectedSchedule->status === 'draft') {
@@ -87,12 +89,45 @@ class ScheduleController extends Controller
             'section_code' => $section->section_code,
         ])->values();
 
+        $programs = Program::orderBy('code')->get();
+        $programsJson = $programs->map(fn (Program $program): array => [
+            'id' => (int) $program->id,
+            'code' => $program->code,
+            'name' => $program->name,
+        ])->values();
+
+        $rawStatuses = SectionExamSchedule::query()
+            ->select('section_id', 'exam_period', 'status')
+            ->where('academic_year', $filters['academic_year'])
+            ->where('semester', $filters['semester'])
+            ->whereIn('exam_period', $examPeriods)
+            ->get();
+
+        $sectionStatusesByPeriod = [];
+
+        foreach ($examPeriods as $period) {
+            $sectionStatusesByPeriod[$period] = [];
+        }
+
+        foreach ($rawStatuses as $scheduleStatus) {
+            $period = (string) $scheduleStatus->exam_period;
+
+            if (! in_array($period, $examPeriods, true)) {
+                continue;
+            }
+
+            $sectionStatusesByPeriod[$period][(int) $scheduleStatus->section_id] =
+                $scheduleStatus->status === 'published' ? 'uploaded' : 'draft';
+        }
+
         return view('academic-head.schedules.index', [
             'setting' => $setting,
             'filters' => $filters,
-            'programs' => Program::orderBy('code')->get(),
+            'programs' => $programs,
+            'programsJson' => $programsJson,
             'sections' => $sections,
             'sectionsJson' => $sectionsJson,
+            'sectionStatusesByPeriod' => $sectionStatusesByPeriod,
             'selectedSection' => $selectedSection,
             'selectedSchedule' => $selectedSchedule,
             'publishReadiness' => $publishReadiness,
@@ -216,11 +251,12 @@ class ScheduleController extends Controller
         }
 
         $matrix = ExamMatrix::query()
-            ->where('academic_year', $setting->academic_year)
-            ->where('semester', (int) $validated['semester'])
-            ->where('exam_period', $validated['exam_period'])
-            ->where('status', 'uploaded')
-            ->latest()
+            ->uploadedForScheduleContext(
+                (string) $setting->academic_year,
+                (int) $validated['semester'],
+                (string) $validated['exam_period'],
+                (int) $validated['program_id']
+            )
             ->first();
 
         if (! $matrix) {
@@ -251,6 +287,83 @@ class ScheduleController extends Controller
             'year_level' => $section->year_level,
             'section_id' => $section->id,
         ])->with('status', $status);
+    }
+
+    public function fetchMatrixAll(Request $request, ScheduleService $service): RedirectResponse
+    {
+        $setting = AcademicSetting::current();
+
+        if (! $setting) {
+            throw ValidationException::withMessages([
+                'timeline' => 'Academic timeline is not configured yet. Ask the system admin to set it first.',
+            ]);
+        }
+
+        $settingSemester = $this->normalizeSemester($setting->semester) ?? 1;
+
+        $validated = $request->validate([
+            'semester'    => ['required', 'integer', 'between:1,2'],
+            'exam_period' => ['required', 'string', Rule::in(['Prelim', 'Midterm', 'Prefinals', 'Finals'])],
+        ]);
+
+        if ($settingSemester === 1 && (int) $validated['semester'] === 2) {
+            throw ValidationException::withMessages([
+                'semester' => 'Second semester schedules are locked until the academic timeline is set to 2nd Semester.',
+            ]);
+        }
+
+        $draftSchedules = SectionExamSchedule::query()
+            ->with('section')
+            ->where('academic_year', $setting->academic_year)
+            ->where('semester', (int) $validated['semester'])
+            ->where('exam_period', $validated['exam_period'])
+            ->where('status', 'draft')
+            ->get();
+
+        if ($draftSchedules->isEmpty()) {
+            return redirect()->route('academic-head.schedules.index', [
+                'academic_year' => $setting->academic_year,
+                'semester'      => (int) $validated['semester'],
+                'exam_period'   => $validated['exam_period'],
+            ])->with('status', 'No draft schedules found for this semester and exam period.');
+        }
+
+        $totalUpdated = 0;
+        $totalCreated = 0;
+        $totalRemoved = 0;
+        $scheduleCount = 0;
+        $skipped = 0;
+
+        /** @var SectionExamSchedule $schedule */
+        foreach ($draftSchedules as $schedule) {
+            try {
+                $result = $service->refreshFromLatestMatrix($schedule);
+                $totalUpdated += (int) $result['updated'];
+                $totalCreated += (int) $result['created'];
+                $totalRemoved += (int) $result['removed'];
+                $scheduleCount++;
+            } catch (ValidationException $e) {
+                $skipped++;
+            }
+        }
+
+        $message = sprintf(
+            'Fetched latest matrix for %d schedule(s): %d updated, %d added, %d removed slot(s).',
+            $scheduleCount,
+            $totalUpdated,
+            $totalCreated,
+            $totalRemoved
+        );
+
+        if ($skipped > 0) {
+            $message .= sprintf(' %d schedule(s) skipped (no uploaded matrix or already published).', $skipped);
+        }
+
+        return redirect()->route('academic-head.schedules.index', [
+            'academic_year' => $setting->academic_year,
+            'semester'      => (int) $validated['semester'],
+            'exam_period'   => $validated['exam_period'],
+        ])->with('status', $message);
     }
 
     public function fetchMatrix(SectionExamSchedule $schedule, ScheduleService $service): RedirectResponse
@@ -310,11 +423,12 @@ class ScheduleController extends Controller
         }
 
         $matrix = ExamMatrix::query()
-            ->where('academic_year', $setting->academic_year)
-            ->where('semester', (int) $validated['semester'])
-            ->where('exam_period', $validated['exam_period'])
-            ->where('status', 'uploaded')
-            ->latest()
+            ->uploadedForScheduleContext(
+                (string) $setting->academic_year,
+                (int) $validated['semester'],
+                (string) $validated['exam_period'],
+                (int) $validated['program_id']
+            )
             ->first();
 
         if (! $matrix) {

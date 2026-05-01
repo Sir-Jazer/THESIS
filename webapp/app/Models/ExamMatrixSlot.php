@@ -43,4 +43,11 @@ class ExamMatrixSlot extends Model
             ->orderBy('exam_matrix_slot_subjects.sort_order')
             ->orderBy('exam_matrix_slot_subjects.id');
     }
+
+    public function subjectBatches()
+    {
+        return $this->hasMany(ExamMatrixSubjectBatch::class, 'exam_matrix_slot_id')
+            ->orderBy('subject_id')
+            ->orderBy('batch_no');
+    }
 }

@@ -70,19 +70,34 @@
                             @endforeach
                         </select>
                     </div>
-                    <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">Load Schedule</button>
+                    <div class="flex gap-2 items-end">
+                        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 font-semibold whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">Load Schedule</button>
+                        <button type="submit"
+                            formaction="{{ route('academic-head.schedules.fetch-matrix-all') }}"
+                            onclick="return confirm('Fetch latest uploaded matrix updates for ALL draft schedules in the selected semester and exam period? Fixed-slot subject assignments may be overwritten.')"
+                            class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 font-semibold whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">Fetch Matrix</button>
+                    </div>
                 </form>
-
-                @if ($selectedSchedule && $selectedSchedule->status === 'draft')
-                    <form method="POST" action="{{ route('academic-head.schedules.fetch-matrix', $selectedSchedule) }}" class="mt-3" onsubmit="return confirm('Fetch latest uploaded matrix updates into this draft schedule? Slots newly assigned by matrix may overwrite current subject assignments for matching time slots.');">
-                        @csrf
-                        <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">Fetch Matrix</button>
-                    </form>
-                @endif
 
                 @if ($settingSemester === 1)
                     <p class="mt-2 text-xs text-amber-700">2nd Semester is currently locked by Academic Timeline settings.</p>
                 @endif
+
+                <div class="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                    <span class="font-semibold text-slate-700">Schedule Status Legend:</span>
+                    <span class="inline-flex items-center gap-1">
+                        <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                        <span>Green = Uploaded</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1">
+                        <span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
+                        <span>Yellow = Draft Saved</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1">
+                        <span class="h-2.5 w-2.5 rounded-full bg-red-500"></span>
+                        <span>Red = Not Yet Plotted</span>
+                    </span>
+                </div>
             </div>
 
             @php
@@ -202,15 +217,51 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const programs = @json($programsJson);
             const sections = @json($sectionsJson);
+            const sectionStatusesByPeriod = @json($sectionStatusesByPeriod);
             const programSelect = document.getElementById('program_id');
             const yearLevelSelect = document.getElementById('year_level');
             const sectionSelect = document.getElementById('section_id');
+            const examPeriodSelect = document.getElementById('exam_period');
 
+            const selectedProgramId = '{{ $filters['program_id'] }}';
             const selectedYearLevel = '{{ $filters['year_level'] }}';
             const selectedSectionId = '{{ $filters['section_id'] }}';
 
+            const statusMeta = {
+                uploaded: { label: 'Uploaded', color: '#15803d', marker: 'G' },
+                draft: { label: 'Draft Saved', color: '#b45309', marker: 'Y' },
+                no_plot: { label: 'Not Yet Plotted', color: '#b91c1c', marker: 'R' },
+            };
+
             const uniqueSorted = (arr) => Array.from(new Set(arr)).sort((a, b) => a - b);
+
+            const getSectionStatus = (sectionId, examPeriod) => {
+                if (!examPeriod || !sectionStatusesByPeriod[examPeriod]) {
+                    return 'no_plot';
+                }
+
+                return sectionStatusesByPeriod[examPeriod][String(sectionId)] || 'no_plot';
+            };
+
+            const rollupStatus = (statuses) => {
+                if (statuses.length === 0 || statuses.includes('no_plot')) {
+                    return 'no_plot';
+                }
+
+                if (statuses.includes('draft')) {
+                    return 'draft';
+                }
+
+                return 'uploaded';
+            };
+
+            const buildStatusLabel = (baseLabel, status) => {
+                const meta = statusMeta[status] || statusMeta.no_plot;
+
+                return '[' + meta.marker + '] ' + baseLabel + ' (' + meta.label + ')';
+            };
 
             const setOptions = (element, placeholder, options, selectedValue) => {
                 element.innerHTML = '';
@@ -224,15 +275,41 @@
                     const opt = document.createElement('option');
                     opt.value = String(option.value);
                     opt.textContent = option.label;
+
+                    if (option.status && statusMeta[option.status]) {
+                        opt.style.color = statusMeta[option.status].color;
+                    }
+
                     if (String(option.value) === String(selectedValue)) {
                         opt.selected = true;
                     }
+
                     element.appendChild(opt);
                 });
             };
 
+            const refreshPrograms = (selected) => {
+                const period = examPeriodSelect.value;
+                const options = programs.map((program) => {
+                    const statuses = sections
+                        .filter((section) => section.program_id === program.id)
+                        .map((section) => getSectionStatus(section.id, period));
+
+                    const status = rollupStatus(statuses);
+
+                    return {
+                        value: program.id,
+                        label: buildStatusLabel(program.code + ' - ' + program.name, status),
+                        status,
+                    };
+                });
+
+                setOptions(programSelect, 'Select program', options, selected);
+            };
+
             const refreshYearLevels = (selected) => {
                 const programId = Number(programSelect.value || 0);
+                const period = examPeriodSelect.value;
                 const levels = uniqueSorted(
                     sections
                         .filter((section) => section.program_id === programId)
@@ -242,7 +319,18 @@
                 setOptions(
                     yearLevelSelect,
                     'Select year level',
-                    levels.map((level) => ({ value: level, label: 'Year ' + level })),
+                    levels.map((level) => {
+                        const levelStatuses = sections
+                            .filter((section) => section.program_id === programId && section.year_level === level)
+                            .map((section) => getSectionStatus(section.id, period));
+                        const status = rollupStatus(levelStatuses);
+
+                        return {
+                            value: level,
+                            label: buildStatusLabel('Year ' + level, status),
+                            status,
+                        };
+                    }),
                     selected
                 );
             };
@@ -250,6 +338,7 @@
             const refreshSections = (selected) => {
                 const programId = Number(programSelect.value || 0);
                 const yearLevel = Number(yearLevelSelect.value || 0);
+                const period = examPeriodSelect.value;
                 const filteredSections = sections
                     .filter((section) => section.program_id === programId && section.year_level === yearLevel)
                     .sort((a, b) => a.section_code.localeCompare(b.section_code));
@@ -257,7 +346,15 @@
                 setOptions(
                     sectionSelect,
                     'Select section',
-                    filteredSections.map((section) => ({ value: section.id, label: section.section_code })),
+                    filteredSections.map((section) => {
+                        const status = getSectionStatus(section.id, period);
+
+                        return {
+                            value: section.id,
+                            label: buildStatusLabel(section.section_code, status),
+                            status,
+                        };
+                    }),
                     selected
                 );
             };
@@ -271,6 +368,13 @@
                 refreshSections('');
             });
 
+            examPeriodSelect.addEventListener('change', function () {
+                refreshPrograms(programSelect.value);
+                refreshYearLevels(yearLevelSelect.value);
+                refreshSections(sectionSelect.value);
+            });
+
+            refreshPrograms(selectedProgramId);
             refreshYearLevels(selectedYearLevel);
             refreshSections(selectedSectionId);
         });

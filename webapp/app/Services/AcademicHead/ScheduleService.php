@@ -14,6 +14,10 @@ use Illuminate\Validation\ValidationException;
 
 class ScheduleService
 {
+    public function __construct(private readonly ExamMatrixBatchService $batchService)
+    {
+    }
+
     /**
      * @return array{
      *     has_blockers: bool,
@@ -25,6 +29,7 @@ class ScheduleService
      */
     public function getPublishReadiness(SectionExamSchedule $schedule): array
     {
+        $schedule = $this->reconcileDraftMatrixAssignments($schedule);
         $blockers = $this->collectPublishBlockers($schedule);
 
         $totalBlockers = count($blockers['missing_fixed_subjects'])
@@ -43,8 +48,11 @@ class ScheduleService
     public function generateForSection(ExamMatrix $matrix, Section $section, int $actorId): SectionExamSchedule
     {
         $matrix->loadMissing(['slots.slotSubjects']);
+        $this->batchService->syncDuplicateSubjectBatches($matrix);
+        $slotBatchMap = $this->batchService->slotBatchMap($matrix);
+        $sectionBatchMap = $this->batchService->sectionBatchMap($matrix, $section);
 
-        return DB::transaction(function () use ($matrix, $section, $actorId): SectionExamSchedule {
+        return DB::transaction(function () use ($matrix, $section, $actorId, $slotBatchMap, $sectionBatchMap): SectionExamSchedule {
             $schedule = SectionExamSchedule::updateOrCreate(
                 [
                     'section_id' => $section->id,
@@ -71,6 +79,12 @@ class ScheduleService
 
                 if ($slot->is_fixed) {
                     $fixedSubjectId = $this->resolveFixedSubjectId($slot, $eligibleSubjectIds);
+                    $fixedSubjectId = $this->resolveBatchConstrainedSubject(
+                        $slot,
+                        $fixedSubjectId,
+                        $slotBatchMap,
+                        $sectionBatchMap
+                    );
                 }
 
                 $schedule->slots()->create([
@@ -90,16 +104,33 @@ class ScheduleService
 
     public function reset(SectionExamSchedule $schedule): SectionExamSchedule
     {
-        $schedule->loadMissing(['section', 'slots.matrixSlot.slotSubjects']);
+        $schedule->loadMissing(['section', 'matrix.slots.slotSubjects', 'slots.matrixSlot.slotSubjects']);
         $eligibleSubjectIds = $this->eligibleSubjectIdsForSection($schedule->section, (int) $schedule->semester);
 
-        DB::transaction(function () use ($schedule, $eligibleSubjectIds): void {
+        $slotBatchMap = [];
+        $sectionBatchMap = [];
+
+        if ($schedule->matrix) {
+            $this->batchService->syncDuplicateSubjectBatches($schedule->matrix);
+            $slotBatchMap = $this->batchService->slotBatchMap($schedule->matrix);
+            $sectionBatchMap = $this->batchService->sectionBatchMap($schedule->matrix, $schedule->section);
+        }
+
+        DB::transaction(function () use ($schedule, $eligibleSubjectIds, $slotBatchMap, $sectionBatchMap): void {
             foreach ($schedule->slots as $slot) {
                 $slot->proctors()->detach();
 
                 if ($slot->is_fixed) {
+                    $subjectId = $this->resolveFixedSubjectId($slot->matrixSlot, $eligibleSubjectIds);
+                    $subjectId = $this->resolveBatchConstrainedSubject(
+                        $slot->matrixSlot,
+                        $subjectId,
+                        $slotBatchMap,
+                        $sectionBatchMap
+                    );
+
                     $slot->update([
-                        'subject_id' => $this->resolveFixedSubjectId($slot->matrixSlot, $eligibleSubjectIds),
+                        'subject_id' => $subjectId,
                         'room_id' => null,
                         'is_manual_assignment' => false,
                     ]);
@@ -140,11 +171,12 @@ class ScheduleService
         $schedule->loadMissing(['section', 'slots.proctors']);
 
         $latestMatrix = ExamMatrix::query()
-            ->where('academic_year', $schedule->academic_year)
-            ->where('semester', (int) $schedule->semester)
-            ->where('exam_period', $schedule->exam_period)
-            ->where('status', 'uploaded')
-            ->latest()
+            ->uploadedForScheduleContext(
+                (string) $schedule->academic_year,
+                (int) $schedule->semester,
+                (string) $schedule->exam_period,
+                (int) $schedule->program_id
+            )
             ->first();
 
         if (! $latestMatrix) {
@@ -154,9 +186,12 @@ class ScheduleService
         }
 
         $latestMatrix->loadMissing(['slots.slotSubjects']);
+        $this->batchService->syncDuplicateSubjectBatches($latestMatrix);
+        $slotBatchMap = $this->batchService->slotBatchMap($latestMatrix);
+        $sectionBatchMap = $this->batchService->sectionBatchMap($latestMatrix, $schedule->section);
         $eligibleSubjectIds = $this->eligibleSubjectIdsForSection($schedule->section, (int) $schedule->semester);
 
-        return DB::transaction(function () use ($schedule, $latestMatrix, $eligibleSubjectIds): array {
+        return DB::transaction(function () use ($schedule, $latestMatrix, $eligibleSubjectIds, $slotBatchMap, $sectionBatchMap): array {
             $existingSlots = $schedule->slots->keyBy(function (SectionExamScheduleSlot $slot): string {
                 return $this->buildSlotKey($slot->slot_date, (string) $slot->start_time, (string) $slot->end_time);
             });
@@ -173,6 +208,15 @@ class ScheduleService
                 $matrixSubjectId = $matrixSlot->is_fixed
                     ? $this->resolveFixedSubjectId($matrixSlot, $eligibleSubjectIds)
                     : null;
+
+                if ($matrixSlot->is_fixed) {
+                    $matrixSubjectId = $this->resolveBatchConstrainedSubject(
+                        $matrixSlot,
+                        $matrixSubjectId,
+                        $slotBatchMap,
+                        $sectionBatchMap
+                    );
+                }
 
                 /** @var SectionExamScheduleSlot|null $existingSlot */
                 $existingSlot = $existingSlots->get($slotKey);
@@ -202,7 +246,7 @@ class ScheduleService
                 ];
 
                 $existingSubjectId = $existingSlot->subject_id === null ? null : (int) $existingSlot->subject_id;
-                $shouldOverwriteSubject = $matrixSubjectId !== null && $matrixSubjectId !== $existingSubjectId;
+                $shouldOverwriteSubject = (bool) $matrixSlot->is_fixed && $matrixSubjectId !== $existingSubjectId;
 
                 if ($shouldOverwriteSubject) {
                     $existingSlot->update(array_merge($baseUpdates, [
@@ -513,6 +557,7 @@ class ScheduleService
 
     private function assertSchedulePublishable(SectionExamSchedule $schedule): void
     {
+        $schedule = $this->reconcileDraftMatrixAssignments($schedule);
         $blockers = $this->collectPublishBlockers($schedule);
 
         if (! empty($blockers['missing_fixed_subjects'])) {
@@ -544,6 +589,7 @@ class ScheduleService
     private function collectPublishBlockers(SectionExamSchedule $schedule): array
     {
         $schedule->loadMissing(['slots.proctors']);
+        $expectedFixedSubjects = $this->expectedFixedSubjectsForSchedule($schedule);
 
         $blockers = [
             'missing_fixed_subjects' => [],
@@ -553,8 +599,12 @@ class ScheduleService
 
         foreach ($schedule->slots as $slot) {
             $slotLabel = $this->slotContextLabel($slot);
+            $expectedFixedSubject = $expectedFixedSubjects[(int) $slot->id] ?? [
+                'requires_subject' => (bool) $slot->is_fixed,
+                'subject_id' => null,
+            ];
 
-            if ($slot->is_fixed && ! $slot->subject_id) {
+            if ($expectedFixedSubject['requires_subject'] && ! $slot->subject_id) {
                 $blockers['missing_fixed_subjects'][] = $slotLabel;
             }
 
@@ -588,6 +638,176 @@ class ScheduleService
         }
 
         return $subjectIds->first();
+    }
+
+    /**
+     * @param array<string, int> $slotBatchMap
+     * @param array<int, int> $sectionBatchMap
+     */
+    private function resolveBatchConstrainedSubject($matrixSlot, ?int $subjectId, array $slotBatchMap, array $sectionBatchMap): ?int
+    {
+        if ($subjectId === null || ! $matrixSlot) {
+            return $subjectId;
+        }
+
+        if (! $this->subjectHasBatchConstraint($subjectId, $slotBatchMap)) {
+            return $subjectId;
+        }
+
+        $slotId = (int) $matrixSlot->id;
+        $batchKey = $this->batchService->subjectSlotKey($subjectId, $slotId);
+
+        if (! array_key_exists($batchKey, $slotBatchMap)) {
+            return null;
+        }
+
+        $sectionBatchNo = $sectionBatchMap[$subjectId] ?? null;
+        if ($sectionBatchNo === null) {
+            return null;
+        }
+
+        return (int) $sectionBatchNo === (int) $slotBatchMap[$batchKey]
+            ? $subjectId
+            : null;
+    }
+
+    /**
+     * @param array<string, int> $slotBatchMap
+     */
+    private function subjectHasBatchConstraint(int $subjectId, array $slotBatchMap): bool
+    {
+        $prefix = $subjectId.':';
+
+        foreach (array_keys($slotBatchMap) as $key) {
+            if (str_starts_with((string) $key, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function reconcileDraftMatrixAssignments(SectionExamSchedule $schedule): SectionExamSchedule
+    {
+        if ($schedule->isPublished()) {
+            return $schedule;
+        }
+
+        $schedule->loadMissing([
+            'section.program',
+            'matrix.slots.slotSubjects',
+            'slots.subject',
+            'slots.room',
+            'slots.proctors',
+            'slots.matrixSlot.slotSubjects',
+        ]);
+
+        if (! $schedule->matrix || ! $schedule->section) {
+            return $schedule;
+        }
+
+        $this->batchService->syncDuplicateSubjectBatches($schedule->matrix);
+
+        $slotBatchMap = $this->batchService->slotBatchMap($schedule->matrix);
+        $sectionBatchMap = $this->batchService->sectionBatchMap($schedule->matrix, $schedule->section);
+        $eligibleSubjectIds = $this->eligibleSubjectIdsForSection($schedule->section, (int) $schedule->semester);
+
+        $didUpdate = false;
+
+        DB::transaction(function () use ($schedule, $eligibleSubjectIds, $slotBatchMap, $sectionBatchMap, &$didUpdate): void {
+            foreach ($schedule->slots as $slot) {
+                if (! $slot->is_fixed) {
+                    continue;
+                }
+
+                $resolvedSubjectId = $this->resolveFixedSubjectId($slot->matrixSlot, $eligibleSubjectIds);
+                $resolvedSubjectId = $this->resolveBatchConstrainedSubject(
+                    $slot->matrixSlot,
+                    $resolvedSubjectId,
+                    $slotBatchMap,
+                    $sectionBatchMap
+                );
+
+                $currentSubjectId = $slot->subject_id === null ? null : (int) $slot->subject_id;
+
+                if ($currentSubjectId === $resolvedSubjectId) {
+                    continue;
+                }
+
+                $slot->update([
+                    'subject_id' => $resolvedSubjectId,
+                    'room_id' => null,
+                    'is_manual_assignment' => false,
+                ]);
+                $slot->proctors()->detach();
+                $didUpdate = true;
+            }
+        });
+
+        if (! $didUpdate) {
+            return $schedule;
+        }
+
+        return $schedule->fresh(['section.program', 'slots.subject', 'slots.room', 'slots.proctors']) ?? $schedule;
+    }
+
+    /**
+     * @return array<int, array{requires_subject: bool, subject_id: ?int}>
+     */
+    private function expectedFixedSubjectsForSchedule(SectionExamSchedule $schedule): array
+    {
+        $schedule->loadMissing([
+            'section',
+            'matrix.slots.slotSubjects',
+            'slots.matrixSlot.slotSubjects',
+        ]);
+
+        if (! $schedule->matrix || ! $schedule->section) {
+            return [];
+        }
+
+        $this->batchService->syncDuplicateSubjectBatches($schedule->matrix);
+
+        $slotBatchMap = $this->batchService->slotBatchMap($schedule->matrix);
+        $sectionBatchMap = $this->batchService->sectionBatchMap($schedule->matrix, $schedule->section);
+        $eligibleSubjectIds = $this->eligibleSubjectIdsForSection($schedule->section, (int) $schedule->semester);
+
+        $expectedSubjects = [];
+
+        foreach ($schedule->slots as $slot) {
+            if (! $slot->is_fixed) {
+                continue;
+            }
+
+            $resolvedSubjectId = $this->resolveFixedSubjectId($slot->matrixSlot, $eligibleSubjectIds);
+            $expectedSubjectId = $this->resolveBatchConstrainedSubject(
+                $slot->matrixSlot,
+                $resolvedSubjectId,
+                $slotBatchMap,
+                $sectionBatchMap
+            );
+
+            // Matrix slot had subject entries, but none are eligible for this section/program.
+            $isProgramIneligibleFiltered = false;
+            if ($slot->matrixSlot && $slot->matrixSlot->slotSubjects->isNotEmpty() && $resolvedSubjectId === null) {
+                $isProgramIneligibleFiltered = true;
+            }
+
+            $isDuplicateFiltered = false;
+            if ($resolvedSubjectId !== null && $slot->matrixSlot) {
+                $batchKey = $this->batchService->subjectSlotKey($resolvedSubjectId, (int) $slot->matrixSlot->id);
+                $isDuplicateFiltered = array_key_exists($batchKey, $slotBatchMap) && $expectedSubjectId === null;
+            }
+
+            $isFiltered = $isProgramIneligibleFiltered || $isDuplicateFiltered;
+
+            $expectedSubjects[(int) $slot->id] = [
+                'requires_subject' => ! $isFiltered,
+                'subject_id' => $expectedSubjectId,
+            ];
+        }
+
+        return $expectedSubjects;
     }
 
     private function nullableInt(mixed $value): ?int

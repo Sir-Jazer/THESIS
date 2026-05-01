@@ -79,6 +79,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/academic-head/dashboard', AcademicHeadDashboardController::class)->name('academic-head.dashboard');
         Route::get('/academic-head/schedules', [AcademicHeadScheduleController::class, 'index'])->name('academic-head.schedules.index');
         Route::post('/academic-head/schedules/load', [AcademicHeadScheduleController::class, 'load'])->name('academic-head.schedules.load');
+        Route::post('/academic-head/schedules/fetch-matrix-all', [AcademicHeadScheduleController::class, 'fetchMatrixAll'])->name('academic-head.schedules.fetch-matrix-all');
         Route::post('/academic-head/schedules/{schedule}/fetch-matrix', [AcademicHeadScheduleController::class, 'fetchMatrix'])->name('academic-head.schedules.fetch-matrix');
         Route::post('/academic-head/schedules/generate', [AcademicHeadScheduleController::class, 'generate'])->name('academic-head.schedules.generate');
         Route::get('/academic-head/schedules/{schedule}/edit', [AcademicHeadScheduleController::class, 'edit'])->name('academic-head.schedules.edit');
@@ -90,6 +91,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/academic-head/general-exam-matrix', [AcademicHeadGeneralExamMatrixController::class, 'index'])->name('academic-head.general-exam-matrix.index');
         Route::get('/academic-head/general-exam-matrix/create', [AcademicHeadGeneralExamMatrixController::class, 'create'])->name('academic-head.general-exam-matrix.create');
         Route::post('/academic-head/general-exam-matrix', [AcademicHeadGeneralExamMatrixController::class, 'store'])->name('academic-head.general-exam-matrix.store');
+        Route::get('/academic-head/general-exam-matrix/{matrix}/classify-duplicates', [AcademicHeadGeneralExamMatrixController::class, 'classifyDuplicates'])->name('academic-head.general-exam-matrix.classify-duplicates');
+        Route::post('/academic-head/general-exam-matrix/{matrix}/classify-duplicates', [AcademicHeadGeneralExamMatrixController::class, 'saveDuplicateClassification'])->name('academic-head.general-exam-matrix.save-duplicate-classification');
         Route::post('/academic-head/general-exam-matrix/{matrix}/upload', [AcademicHeadGeneralExamMatrixController::class, 'upload'])->name('academic-head.general-exam-matrix.upload');
         Route::get('/academic-head/general-exam-matrix/{matrix}/edit', [AcademicHeadGeneralExamMatrixController::class, 'edit'])->name('academic-head.general-exam-matrix.edit');
         Route::put('/academic-head/general-exam-matrix/{matrix}', [AcademicHeadGeneralExamMatrixController::class, 'update'])->name('academic-head.general-exam-matrix.update');

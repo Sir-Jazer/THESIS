@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AcademicSetting;
 use App\Models\ExamMatrix;
 use App\Models\Subject;
+use App\Services\AcademicHead\ExamMatrixBatchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,10 @@ use Illuminate\View\View;
 
 class GeneralExamMatrixController extends Controller
 {
+    public function __construct(private readonly ExamMatrixBatchService $batchService)
+    {
+    }
+
     private const EXAM_DAY_COUNT = 4;
 
     private const STANDARD_PERIODS = [
@@ -92,8 +97,10 @@ class GeneralExamMatrixController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validatePayload($request);
+        $matrixId = null;
+        $hasDuplicates = false;
 
-        DB::transaction(function () use ($validated, $request): void {
+        DB::transaction(function () use ($validated, $request, &$matrixId, &$hasDuplicates): void {
             $matrix = ExamMatrix::create([
                 'academic_year' => $validated['academic_year'],
                 'semester' => (int) $validated['semester'],
@@ -104,7 +111,16 @@ class GeneralExamMatrixController extends Controller
             ]);
 
             $this->syncSlots($matrix, $validated['slots']);
+
+            $syncResult = $this->batchService->syncDuplicateSubjectBatches($matrix);
+            $hasDuplicates = (bool) $syncResult['has_duplicates'];
+            $matrixId = (int) $matrix->id;
         });
+
+        if ($hasDuplicates && $matrixId !== null) {
+            return redirect()->route('academic-head.general-exam-matrix.classify-duplicates', $matrixId)
+                ->with('status', 'Matrix saved. Duplicate subjects detected, complete batch classification before upload.');
+        }
 
         return redirect()->route('academic-head.general-exam-matrix.index')->with('status', 'General exam matrix created successfully.');
     }
@@ -126,8 +142,9 @@ class GeneralExamMatrixController extends Controller
     public function update(Request $request, ExamMatrix $matrix): RedirectResponse
     {
         $validated = $this->validatePayload($request, $matrix->id);
+        $hasDuplicates = false;
 
-        DB::transaction(function () use ($matrix, $validated): void {
+        DB::transaction(function () use ($matrix, $validated, &$hasDuplicates): void {
             $matrix->update([
                 'academic_year' => $validated['academic_year'],
                 'semester' => (int) $validated['semester'],
@@ -137,7 +154,15 @@ class GeneralExamMatrixController extends Controller
             ]);
 
             $this->syncSlots($matrix, $validated['slots']);
+
+            $syncResult = $this->batchService->syncDuplicateSubjectBatches($matrix);
+            $hasDuplicates = (bool) $syncResult['has_duplicates'];
         });
+
+        if ($hasDuplicates) {
+            return redirect()->route('academic-head.general-exam-matrix.classify-duplicates', $matrix)
+                ->with('status', 'Matrix updated. Duplicate subjects detected, complete batch classification before upload.');
+        }
 
         return redirect()->route('academic-head.general-exam-matrix.index')->with('status', 'General exam matrix updated successfully.');
     }
@@ -149,8 +174,43 @@ class GeneralExamMatrixController extends Controller
         return redirect()->route('academic-head.general-exam-matrix.index')->with('status', 'General exam matrix deleted successfully.');
     }
 
+    public function classifyDuplicates(ExamMatrix $matrix): ViewContract|RedirectResponse
+    {
+        $classification = $this->batchService->buildClassificationData($matrix);
+
+        if (! $classification['has_duplicates']) {
+            return redirect()->route('academic-head.general-exam-matrix.index')
+                ->with('status', 'No duplicate subjects found. Matrix is ready for upload.');
+        }
+
+        return view('academic-head.general-exam-matrix.classify-duplicates', [
+            'matrix' => $matrix,
+            'classification' => $classification,
+        ]);
+    }
+
+    public function saveDuplicateClassification(Request $request, ExamMatrix $matrix): RedirectResponse
+    {
+        $assignments = $request->input('assignments', []);
+        $assignments = is_array($assignments) ? $assignments : [];
+
+        $this->batchService->persistAssignments($matrix, $assignments);
+
+        return redirect()->route('academic-head.general-exam-matrix.index')
+            ->with('status', 'Duplicate-subject batch mapping saved successfully. Matrix is ready for upload.');
+    }
+
     public function upload(Request $request, ExamMatrix $matrix): RedirectResponse
     {
+        $this->batchService->syncDuplicateSubjectBatches($matrix);
+        $blockers = $this->batchService->getUploadBlockers($matrix);
+
+        if ($blockers['has_duplicates'] && ! $blockers['is_complete']) {
+            throw ValidationException::withMessages([
+                'upload' => 'Duplicate-subject batch mapping is incomplete. Resolve these subjects before upload: '.implode('; ', $blockers['unresolved_subject_labels']),
+            ]);
+        }
+
         DB::transaction(function () use ($request, $matrix): void {
             ExamMatrix::query()
                 ->where('id', '!=', $matrix->id)
