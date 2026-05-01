@@ -142,8 +142,8 @@ class SubjectController extends Controller
             'corequisite_ids' => ['nullable', 'array'],
             'corequisite_ids.*' => ['integer', 'exists:subjects,id'],
         ], [
-            'code.unique' => 'This subject code already exists. Use a different code for another program-specific offering.',
-            'course_serial_number.unique' => 'This course serial number already exists. Enter a unique fixed serial number for this subject.',
+            'code.unique' => 'This subject code already exists. Edit the existing subject and add another Program Association instead of creating a duplicate subject.',
+            'course_serial_number.unique' => 'This course serial number already exists. Edit the existing subject and add another Program Association instead of creating a duplicate subject.',
             'program_links.*.program_id.distinct' => 'Each program may only appear once in Program Associations for this subject record.',
             'program_links.*.program_id.required' => 'Select a program for each association row.',
             'program_links.*.year_level.required' => 'Select a year level for each program association.',

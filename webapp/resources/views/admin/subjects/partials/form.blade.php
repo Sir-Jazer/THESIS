@@ -20,7 +20,7 @@
         <div class="sm:col-span-2"><x-input-label for="name" value="Subject Name" /><x-text-input id="name" name="name" class="mt-1 block w-full text-base" :value="old('name', $subject?->name)" required /></div>
     </div>
     <p class="text-sm text-gray-300 dark:text-gray-300 font-medium">
-        Enter subjects manually per program code. Similar subject names are allowed across programs, but each program-specific offering should have its own subject code and subject record. Course Serial Number is the fixed identifier used during examinations.
+        Subject Code and Course Serial Number identify one shared subject record. Use Program Associations below to attach this subject to one or more programs.
     </p>
 
     <div>
@@ -37,28 +37,58 @@
             }
             $existingLinks = $existingLinks ?? [['program_id' => '', 'year_level' => 1, 'semester' => 1]];
         @endphp
-        @foreach ($existingLinks as $idx => $link)
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <select name="program_links[{{ $idx }}][program_id]" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600" required>
+        <div id="program-links-container" class="space-y-3">
+            @foreach ($existingLinks as $idx => $link)
+                <div class="program-link-row grid grid-cols-1 sm:grid-cols-4 gap-3" data-row-index="{{ $idx }}">
+                    <select name="program_links[{{ $idx }}][program_id]" data-field="program_id" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600" required>
+                        <option value="">Program</option>
+                        @foreach ($programs as $program)
+                            <option value="{{ $program->id }}" @selected((string)($link['program_id'] ?? '') === (string)$program->id)>{{ $program->code }}</option>
+                        @endforeach
+                    </select>
+                    <select name="program_links[{{ $idx }}][year_level]" data-field="year_level" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600" required>
+                        @php $yearLabels = [1 => '1st Year', 2 => '2nd Year', 3 => '3rd Year', 4 => '4th Year']; @endphp
+                        @foreach ($yearLabels as $value => $label)
+                            <option value="{{ $value }}" @selected((int)($link['year_level'] ?? 1) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <select name="program_links[{{ $idx }}][semester]" data-field="semester" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600" required>
+                        <option value="1" @selected((int)($link['semester'] ?? 1) === 1)>1st Semester</option>
+                        <option value="2" @selected((int)($link['semester'] ?? 1) === 2)>2nd Semester</option>
+                    </select>
+                    <button type="button" class="js-remove-program-row px-3 py-2 text-sm font-semibold rounded-md border border-red-500 text-red-200 hover:bg-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed">Remove</button>
+                </div>
+            @endforeach
+        </div>
+
+        <template id="program-link-row-template">
+            <div class="program-link-row grid grid-cols-1 sm:grid-cols-4 gap-3" data-row-index="0">
+                <select data-field="program_id" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600" required>
                     <option value="">Program</option>
                     @foreach ($programs as $program)
-                        <option value="{{ $program->id }}" @selected((string)($link['program_id'] ?? '') === (string)$program->id)>{{ $program->code }}</option>
+                        <option value="{{ $program->id }}">{{ $program->code }}</option>
                     @endforeach
                 </select>
-                <select name="program_links[{{ $idx }}][year_level]" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600" required>
+                <select data-field="year_level" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600" required>
                     @php $yearLabels = [1 => '1st Year', 2 => '2nd Year', 3 => '3rd Year', 4 => '4th Year']; @endphp
                     @foreach ($yearLabels as $value => $label)
-                        <option value="{{ $value }}" @selected((int)($link['year_level'] ?? 1) === $value)>{{ $label }}</option>
+                        <option value="{{ $value }}" @selected($value === 1)>{{ $label }}</option>
                     @endforeach
                 </select>
-                <select name="program_links[{{ $idx }}][semester]" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600" required>
-                    <option value="1" @selected((int)($link['semester'] ?? 1) === 1)>1st Semester</option>
-                    <option value="2" @selected((int)($link['semester'] ?? 1) === 2)>2nd Semester</option>
+                <select data-field="semester" class="text-base border-slate-600 rounded-md dark:bg-slate-700 dark:text-gray-100 dark:border-slate-600" required>
+                    <option value="1" selected>1st Semester</option>
+                    <option value="2">2nd Semester</option>
                 </select>
+                <button type="button" class="js-remove-program-row px-3 py-2 text-sm font-semibold rounded-md border border-red-500 text-red-200 hover:bg-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed">Remove</button>
             </div>
-        @endforeach
+        </template>
+
+        <div>
+            <button type="button" id="add-program-link-row" class="px-3 py-2 text-sm font-semibold rounded-md border border-blue-400 text-blue-100 hover:bg-blue-500/20">Add Program Association</button>
+        </div>
+
         <p class="text-sm text-gray-400 dark:text-gray-400 font-medium">
-            Program Associations are for this specific subject record only. If another program offers a similar subject with a different course code, create a separate subject entry for that program.
+            Add one row per program. You can attach the same subject record to multiple programs, each with its own year level and semester.
         </p>
     </div>
 
@@ -101,3 +131,96 @@
 
     <div class="flex justify-end"><button class="px-4 py-2.5 text-base bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition duration-150 ease-in-out">Save Subject</button></div>
 </form>
+
+@once
+    @push('scripts')
+        <script>
+            (function () {
+                const container = document.getElementById('program-links-container');
+                const addButton = document.getElementById('add-program-link-row');
+                const template = document.getElementById('program-link-row-template');
+
+                if (!container || !addButton || !template) {
+                    return;
+                }
+
+                const clearRow = (row) => {
+                    row.querySelectorAll('select[data-field]').forEach((select) => {
+                        if (select.getAttribute('data-field') === 'year_level' || select.getAttribute('data-field') === 'semester') {
+                            select.value = '1';
+                        } else {
+                            select.value = '';
+                        }
+                    });
+                };
+
+                const setRowIndex = (row, index) => {
+                    row.dataset.rowIndex = String(index);
+                    row.querySelectorAll('select[data-field]').forEach((select) => {
+                        const field = select.getAttribute('data-field');
+                        select.name = `program_links[${index}][${field}]`;
+                    });
+                };
+
+                const reindexRows = () => {
+                    container.querySelectorAll('.program-link-row').forEach((row, index) => {
+                        setRowIndex(row, index);
+                    });
+                };
+
+                const refreshRemoveButtons = () => {
+                    const rows = container.querySelectorAll('.program-link-row');
+                    const shouldDisable = rows.length === 1;
+                    rows.forEach((row) => {
+                        const removeButton = row.querySelector('.js-remove-program-row');
+                        if (removeButton) {
+                            removeButton.disabled = shouldDisable;
+                        }
+                    });
+                };
+
+                const addRow = () => {
+                    const fragment = template.content.cloneNode(true);
+                    const newRow = fragment.querySelector('.program-link-row');
+                    if (!newRow) {
+                        return;
+                    }
+
+                    container.appendChild(newRow);
+                    reindexRows();
+                    refreshRemoveButtons();
+                };
+
+                addButton.addEventListener('click', () => {
+                    addRow();
+                });
+
+                container.addEventListener('click', (event) => {
+                    const button = event.target.closest('.js-remove-program-row');
+                    if (!button) {
+                        return;
+                    }
+
+                    const rows = container.querySelectorAll('.program-link-row');
+                    const row = button.closest('.program-link-row');
+
+                    if (!row) {
+                        return;
+                    }
+
+                    if (rows.length === 1) {
+                        clearRow(row);
+                        return;
+                    }
+
+                    row.remove();
+                    reindexRows();
+                    refreshRemoveButtons();
+                });
+
+                reindexRows();
+                refreshRemoveButtons();
+            })();
+        </script>
+    @endpush
+@endonce
